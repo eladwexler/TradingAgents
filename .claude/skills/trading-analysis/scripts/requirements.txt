@@ -1,0 +1,14 @@
+# Data-layer dependencies for the trading-analysis skill (no API keys required).
+# These mirror the parent project's pins. Install once with:
+#   pip install -r .claude/skills/trading-analysis/scripts/requirements.txt
+#
+# The skill does NOT need the LLM/orchestration deps (langchain*, langgraph,
+# typer, etc.) because Claude itself plays the agent roles. The lone exception
+# is the optional `identity` resolver, which lazy-imports langchain-core and
+# falls back to a plain yfinance lookup when it is absent — so it is left out
+# here to keep the install minimal.
+pandas>=2.3.0
+stockstats>=0.6.5
+yfinance>=1.4.1
+requests>=2.32.4
+python-dateutil>=2.9.0
