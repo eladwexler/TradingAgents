@@ -78,7 +78,7 @@ Produce four standalone reports. Each ends with a Markdown summary table.
 1. **Market / Technical Analyst.** Run `snapshot` (treat as source of truth), `stock_data`, then `indicators` for **up to 8 complementary** indicators (no redundant pairs, e.g. not both rsi and stochrsi). Briefly justify each chosen indicator for the current regime. Write a detailed, evidence-grounded trend report.
 2. **Sentiment Analyst.** Run `sentiment TICKER CURR_DATE`. Read the StockTwits Bullish/Bearish ratio (≈70/30 mildly bullish; ≥90/10 possible over-extension/contrarian risk; 50/50 uncertain — weight by message count). Weight Reddit by engagement; flag cross-source divergences and data limits. Emit: **overall_band** (Bullish/Mildly Bullish/Neutral/Mixed/Mildly Bearish/Bearish), **overall_score** 0–10, **confidence** (low/med/high), and a narrative with a signal table.
 3. **News Analyst.** Run `news TICKER START END` (≈7-day window) and `global_news CURR_DATE`. Summarize company-specific and macro developments relevant to trading.
-4. **Fundamentals Analyst.** Run `fundamentals`, plus `balance_sheet`/`cashflow`/`income_statement` and `insider` as useful. Cover financial health, profile, history, red flags. (Skip/curtail for crypto.)
+4. **Fundamentals Analyst.** Run `fundamentals`, plus `balance_sheet`/`cashflow`/`income_statement` and `insider` as useful. Cover financial health (explicitly checking the PEG ratio), profile, history, red flags. (Skip/curtail for crypto.)
 
 ### Stage 2 — Research debate (bull vs bear)
 Using all four analyst reports, run `max_debate_rounds` rounds (default 1). Each round:
@@ -98,12 +98,12 @@ Run `max_risk_discuss_rounds` rounds (default 1) over the trader's proposal:
 - **Neutral** analyst — balanced, sustainable middle path; critique both extremes.
 
 ### Stage 6 — Portfolio Manager → final decision
-Synthesize the risk debate **and any recalled past lessons** into the **final decision** with exactly one rating (**Buy / Overweight / Hold / Underweight / Sell**), decisive and grounded in specific evidence. Map to a clear **FINAL TRANSACTION PROPOSAL: BUY/HOLD/SELL** line.
+Synthesize the risk debate **and any recalled past lessons** into the **final decision** with exactly one rating (**Buy / Overweight / Hold / Underweight / Sell**), decisive and grounded in specific evidence. Map to a clear **FINAL TRANSACTION PROPOSAL: BUY/HOLD/SELL** line, and include a specific **VERDICT FOR NEW INVESTORS** outlining whether it's a suitable entry point and the suggested investment horizon.
 
 ### Stage 7 — Persist the decision
 Save the final decision to a per-ticker file **and** append it to the memory log so the next run can learn from it.
 
-1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with a `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**` line and a `Rating: <5-tier>` line so the rating parses cleanly, followed by the decision summary, key evidence, and the plan.
+1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with a `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**` line, a `VERDICT FOR NEW INVESTORS:` line, and a `Rating: <5-tier>` line so the rating parses cleanly, followed by the decision summary, key evidence, and the plan.
 2. Log it:
 ```
 mkdir -p analyzed-stocks/TICKER
@@ -115,7 +115,7 @@ The log entry is stored `pending`; a later run resolves it with the realised ret
 ## Output format
 
 Present, in this order:
-1. **Final decision** up top: `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**` + the five-tier rating + 2–3 sentence rationale.
+1. **Final decision** up top: `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**` + the five-tier rating + **VERDICT FOR NEW INVESTORS** + 2–3 sentence rationale.
 2. Collapsible/clearly-headed sections for each stage (4 analyst reports → research debate + plan → trader proposal → risk debate → PM decision).
 3. A one-line **data caveat** noting any source that returned no data / fell back, and the standard not-financial-advice disclaimer.
 
