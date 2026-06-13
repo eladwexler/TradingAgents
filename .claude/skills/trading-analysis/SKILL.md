@@ -67,8 +67,10 @@ Path: `$TRADINGAGENTS_MEMORY_LOG_PATH`, else `~/.tradingagents/memory/trading_me
 
 Run the stages in order. Write each report to a section as you go; later stages consume earlier ones. Keep the internal debate in English for reasoning quality even if the final summary is requested in another language.
 
-### Stage 0 — Recall + resolve identity
+### Stage 0 — Recall, Macro Context, + resolve identity
 First run `ta_memory.py recall TICKER` and, if it returns prior lessons, weave them into your reasoning (they feed the Portfolio Manager just as in the original). Also resolve any matured pending entries while you're here: `ta_memory.py pending`, then for each that now has enough price history, write a one-paragraph reflection and `ta_memory.py resolve …` it.
+
+Next, check the `ai-cycle-reports/` directory for the latest `*_cycle.md` report. If one exists, read it to grasp the current **Macro AI Phase** and **STANCE**. This macro context will be used to upgrade the final decision later.
 
 Then run `ta_data.py identity TICKER` (or take it from the `gather` bundle). Use the resolved company/sector in every downstream section. Do not substitute a different company unless a later tool result explicitly disproves it. (For crypto `-USD` tickers, treat as an asset; fundamentals may be unavailable.)
 
@@ -105,12 +107,19 @@ Run `max_risk_discuss_rounds` rounds (default 1) over the trader's proposal:
 - **Neutral** analyst — balanced, sustainable middle path; critique both extremes.
 
 ### Stage 6 — Portfolio Manager → final decision
-Synthesize the risk debate **and any recalled past lessons** into the **final decision** with exactly one rating (**Buy / Overweight / Hold / Underweight / Sell**), decisive and grounded in specific evidence. Map to a clear **FINAL TRANSACTION PROPOSAL: BUY/HOLD/SELL** line, and include a specific **VERDICT FOR NEW INVESTORS** outlining whether it's a suitable entry point and the suggested investment horizon.
+Synthesize the risk debate **and any recalled past lessons** into a **Base Decision** (derived purely from the bottom-up stock analysis). 
+Next, explicitly factor in the **Macro Phase / Stance** from the latest `ai-cycle-reports` (from Stage 0) to formulate a **Macro-Adjusted Decision**. For example, if the macro cycle is in Late Phase 2 or Phase 3, heavily penalize high-leverage infrastructure or AI wrappers to enforce top-down macro risk management on the bottom-up pick.
+
+Map this to two clear lines:
+- **FINAL TRANSACTION PROPOSAL (BASE): BUY/HOLD/SELL** (with the 5-tier rating)
+- **FINAL TRANSACTION PROPOSAL (MACRO-ADJUSTED): BUY/HOLD/SELL** (with the 5-tier rating)
+
+Include a specific **VERDICT FOR NEW INVESTORS** outlining whether it's a suitable entry point based on both the base and macro-adjusted views, factoring in the investment horizon.
 
 ### Stage 7 — Persist the decision
 Save the final decision to a per-ticker file **and** append it to the memory log so the next run can learn from it.
 
-1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with a `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**` line, a `VERDICT FOR NEW INVESTORS:` line, and a `Rating: <5-tier>` line so the rating parses cleanly, followed by the decision summary, key evidence, and the plan.
+1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with the base proposal, macro-adjusted proposal, the `VERDICT FOR NEW INVESTORS:` line, and the ratings so they parse cleanly, followed by the decision summary, key evidence, and the plan.
 2. Log it:
 ```
 mkdir -p analyzed-stocks/TICKER
@@ -122,7 +131,7 @@ The log entry is stored `pending`; a later run resolves it with the realised ret
 ## Output format
 
 Present, in this order:
-1. **Final decision** up top: `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**` + the five-tier rating (with a short plain-words gloss, e.g. *Overweight — "own more than average, but sized small for the risk"*) + **VERDICT FOR NEW INVESTORS** + 2–3 sentence rationale.
+1. **Final decision** up top: Both `FINAL TRANSACTION PROPOSAL (BASE): **BUY/HOLD/SELL**` and `FINAL TRANSACTION PROPOSAL (MACRO-ADJUSTED): **BUY/HOLD/SELL**` + their five-tier ratings (with a short plain-words gloss, e.g. *Overweight — "own more than average, but sized small for the risk"*) + **VERDICT FOR NEW INVESTORS** combining both views into a 2–3 sentence rationale.
 2. Collapsible/clearly-headed sections for each stage (4 analyst reports → research debate + plan → trader proposal → risk debate → PM decision).
 3. A one-line **data caveat** noting any source that returned no data / fell back, and the standard not-financial-advice disclaimer.
 

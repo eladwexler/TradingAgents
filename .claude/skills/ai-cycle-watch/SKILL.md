@@ -49,6 +49,9 @@ Score each as **Green** (boom intact) / **Amber** (stress building) / **Red** (r
 6. **Market concentration** — index returns leaning on fewer names = fragility high = Amber.
 7. **Credibility events** — a flagship enterprise AI deployment publicly failing, or a marquee model release underwhelming = narrative crack = Red.
 8. **Depreciation vs. revenue** — as 2024–2026 capex depreciates into income statements, is AI revenue showing up to cover it? Gap widening = Amber→Red.
+9. **Macro/Cost of Capital** — 10-year Treasury yield and high-yield credit spreads. Spikes in yield = higher cost of debt for capex/SPVs = Amber→Red.
+10. **Valuation Heatmap** — Aggregate Forward P/E or PEG ratio of the Mag7/AI basket. Extreme multiple expansion vs historical baselines = euphoria = Amber.
+11. **Insider Selling & Smart Money** — C-suite/10% owner selling in the "survivors" basket (NVDA, MSFT, AVGO). Spikes in insider offloading while retail is euphoric = Red.
 
 ## The baskets (default watchlist)
 
@@ -70,10 +73,10 @@ Capex collapses fast; overbuilt compute/power sits idle and rental prices crater
 State the as-of date (absolute), the phase model, and that timing carries a wide error bar. Pull `ta_data.py global_news DATE` for macro context.
 
 ### Stage 1 — Read the indicators (live)
-For each of the 8 canaries, gather the latest reading via `WebSearch`/`WebFetch` (and `ta_data.py` for any tradable proxy). Date-stamp and cite each. If a reading can't be found, mark it **Unknown** — don't guess.
+For each of the 11 canaries, gather the latest reading via `WebSearch`/`WebFetch` (and `ta_data.py` for hard data, e.g., `fundamentals` for PEG, `insider` for insider selling). Date-stamp and cite each. If a reading can't be found, mark it **Unknown** — don't guess.
 
 ### Stage 2 — Score the board
-Produce a Green/Amber/Red table of all 8 indicators with the one-line evidence for each. Weight #1 (hyperscaler capex) and #2 (GPU rentals) most heavily.
+Produce a Green/Amber/Red table of all 11 indicators with the one-line evidence for each. Weight #1 (hyperscaler capex) and #2 (GPU rentals) most heavily.
 
 ### Stage 3 — Locate the phase + timeline
 From the scored board, place the center of gravity on the phase map and give a **timeline window with its error bar**, distinguishing:
@@ -93,10 +96,11 @@ Write the report to `ai-cycle-reports/<DATE>_cycle.md` (repo-relative; create th
 ## Output format
 
 1. **Stance** up top: one line — current phase, net indicator color, correction window + error bar.
-2. **Indicator scoreboard** — the 8-row Green/Amber/Red table with dated evidence.
+2. **Indicator scoreboard** — the 11-row Green/Amber/Red table with dated evidence.
 3. **Phase + timeline** — where we are, sentiment-vs-structural distinction, the sequence to position for.
 4. **Survivor / casualty** — two short lists (or scored watchlist), with the one-reason-each.
 5. **Data caveat + disclaimer** — note any Unknown indicators / sources that returned nothing, and the standard not-financial-advice line.
+6. **Idiot Investor Summary** — A summary clause at the very end giving a score 0-100 of the "current risk per AI cake" (using Jensen Huang's "AI cake" metaphor about the AI infrastructure build-out) in really simple words for the idiot investor.
 
 ## Notes & failure modes
 - Data deps for `ta_data.py`: `pip install -r .claude/skills/trading-analysis/scripts/requirements.txt` (no keys) if a `ModuleNotFoundError` appears.
