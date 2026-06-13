@@ -177,6 +177,101 @@ def cmd_reddit(args) -> None:
     _emit(fetch_reddit_posts(args.ticker))
 
 
+def _fmt_pct(x) -> str:
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return "n/a"
+    if v != v:  # NaN
+        return "n/a"
+    return f"{v:+.1%}"
+
+
+def _forward_block(ticker: str) -> str:
+    """Build the long-horizon (12-36mo) inputs block: analyst targets, forward
+    multiples, consensus growth.
+
+    Self-contained yfinance pull (these forward fields are not in the project's
+    historical dataflows). Every piece is isolated so a missing field never
+    aborts the block. This is the primary fundamental input for the prediction
+    model — earnings growth, multiple level, and shareholder yield are the three
+    drivers of multi-year return.
+    """
+    import yfinance as yf
+
+    tk = ticker.upper()
+    t = yf.Ticker(tk)
+    info = t.info or {}
+
+    cur = info.get("currentPrice") or info.get("regularMarketPrice")
+    lines = [f"## FORWARD ESTIMATES & VALUATION — {tk}"]
+    if cur:
+        lines.append(f"Current price: {cur}")
+
+    # --- analyst price targets (≈12mo) + implied return ---
+    mean_t, med_t = info.get("targetMeanPrice"), info.get("targetMedianPrice")
+    hi_t, lo_t = info.get("targetHighPrice"), info.get("targetLowPrice")
+    n_an = info.get("numberOfAnalystOpinions")
+    rec = info.get("recommendationKey")
+    rec_mean = info.get("recommendationMean")
+    if mean_t and cur:
+        imp_mean = _fmt_pct(mean_t / cur - 1)
+        imp_med = _fmt_pct(med_t / cur - 1) if med_t else "n/a"
+        lines.append(
+            f"Analyst targets (~12mo): mean {mean_t} ({imp_mean}), median {med_t} ({imp_med}), "
+            f"high {hi_t}, low {lo_t} | {n_an} analysts | rec: {rec} ({rec_mean})"
+        )
+
+    # --- valuation multiples ---
+    tpe, fpe = info.get("trailingPE"), info.get("forwardPE")
+    peg = info.get("trailingPegRatio") or info.get("pegRatio")
+    lines.append(f"Multiples: trailing P/E {tpe} | forward P/E {fpe} | PEG {peg}")
+
+    teps, feps = info.get("trailingEps"), info.get("forwardEps")
+    if teps and feps:
+        lines.append(f"EPS: trailing {teps} | forward {feps} (implied {_fmt_pct(feps / teps - 1)} fwd EPS growth)")
+
+    # --- shareholder yield ---
+    dy, payout = info.get("dividendYield"), info.get("payoutRatio")
+    if dy is not None:
+        lines.append(f"Shareholder yield: dividend ~{dy}% | payout {payout}")
+
+    # --- consensus growth (the key multi-year input) ---
+    def _grow(df, period, col="growth"):
+        try:
+            return _fmt_pct(df.loc[period, col])
+        except Exception:  # noqa: BLE001
+            return "n/a"
+
+    try:
+        ee = t.earnings_estimate
+        lines.append(f"Consensus EPS growth: current FY {_grow(ee, '0y')} | next FY {_grow(ee, '+1y')}")
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        re_ = t.revenue_estimate
+        lines.append(f"Consensus revenue growth: current FY {_grow(re_, '0y')} | next FY {_grow(re_, '+1y')}")
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        ge = t.growth_estimates
+        ltg = _grow(ge, "LTG", "stockTrend")
+        if ltg != "n/a":
+            lines.append(f"Long-term (3-5yr) growth estimate: {ltg}")
+    except Exception:  # noqa: BLE001
+        pass
+
+    lines.append("NOTE: consensus estimates revise frequently and embed optimism bias — one input, not truth.")
+    return "\n".join(lines)
+
+
+def cmd_forward(args) -> None:
+    try:
+        _emit(_forward_block(args.ticker))
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: could not load forward estimates for {args.ticker}: {exc}")
+
+
 def cmd_sentiment(args) -> None:
     """Bundle the three sentiment sources exactly like the sentiment analyst pre-fetch."""
     from tradingagents.dataflows.interface import route_to_vendor
@@ -264,6 +359,8 @@ def cmd_gather(args) -> None:
     if is_crypto:
         print(_section("FUNDAMENTALS", "Skipped: crypto asset, company fundamentals not applicable."))
     else:
+        print(safe("FORWARD ESTIMATES & VALUATION (12-36mo drivers)",
+                   lambda: _forward_block(ticker)))
         print(safe("FUNDAMENTALS", lambda: route_to_vendor("get_fundamentals", ticker, curr)))
         print(safe("INCOME STATEMENT", lambda: route_to_vendor("get_income_statement", ticker, "quarterly", curr)))
         print(safe("BALANCE SHEET", lambda: route_to_vendor("get_balance_sheet", ticker, "quarterly", curr)))
@@ -349,6 +446,10 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("sentiment", help="news+stocktwits+reddit bundle (sentiment analyst inputs)")
     s.add_argument("ticker"); s.add_argument("curr_date")
     s.set_defaults(func=cmd_sentiment)
+
+    s = sub.add_parser("forward", help="analyst targets, forward multiples & consensus growth (12-36mo inputs)")
+    s.add_argument("ticker")
+    s.set_defaults(func=cmd_forward)
 
     return p
 

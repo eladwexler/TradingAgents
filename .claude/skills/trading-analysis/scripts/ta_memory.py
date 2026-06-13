@@ -90,14 +90,27 @@ class DecisionLog:
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
     # --- write ---
-    def store_decision(self, ticker: str, trade_date: str, decision: str) -> bool:
-        """Append a pending entry. Idempotent on (date, ticker). Returns False if dup."""
+    def store_decision(self, ticker: str, trade_date: str, decision: str,
+                       prob: Optional[float] = None,
+                       horizon_months: Optional[int] = None) -> bool:
+        """Append a pending entry. Idempotent on (date, ticker). Returns False if dup.
+
+        ``prob`` is P(beats benchmark over the horizon) and ``horizon_months`` is
+        the forecast horizon — both stored as ``key=value`` tokens so the
+        prediction can be scored for calibration once it resolves.
+        """
+        prefix = f"[{trade_date} | {ticker} |"
         if self.path.exists():
             for line in self.path.read_text(encoding="utf-8").splitlines():
-                if line.startswith(f"[{trade_date} | {ticker} |") and line.endswith("| pending]"):
+                if line.startswith(prefix) and "| pending" in line:
                     return False
         rating = parse_rating(decision)
-        tag = f"[{trade_date} | {ticker} | {rating} | pending]"
+        tag = f"[{trade_date} | {ticker} | {rating} | pending"
+        if prob is not None:
+            tag += f" | P={prob:.2f}"
+        if horizon_months:
+            tag += f" | H={horizon_months}mo"
+        tag += "]"
         with open(self.path, "a", encoding="utf-8") as f:
             f.write(f"{tag}\n\nDECISION:\n{decision}{_SEPARATOR}")
         return True
@@ -141,7 +154,7 @@ class DecisionLog:
 
     # --- update (Phase B) ---
     def update_with_outcome(self, ticker, trade_date, raw_return, alpha_return,
-                            holding_days, reflection) -> bool:
+                            holding_days, reflection, cagr=None) -> bool:
         if not self.path.exists():
             return False
         blocks = self.path.read_text(encoding="utf-8").split(_SEPARATOR)
@@ -154,10 +167,24 @@ class DecisionLog:
                 new_blocks.append(block); continue
             lines = s.splitlines()
             tag = lines[0].strip()
-            if not updated and tag.startswith(prefix) and tag.endswith("| pending]"):
-                fields = [f.strip() for f in tag[1:-1].split("|")]
-                rating = fields[2]
-                new_tag = f"[{trade_date} | {ticker} | {rating} | {raw_pct} | {alpha_pct} | {holding_days}d]"
+            if not updated and tag.startswith(prefix) and "| pending" in tag:
+                # Preserve the forecast tokens (P=, H=) carried on the pending tag.
+                pos, kv = [], {}
+                for f in (x.strip() for x in tag[1:-1].split("|")):
+                    if "=" in f:
+                        k, _, v = f.partition("=")
+                        kv[k.strip()] = v.strip()
+                    else:
+                        pos.append(f)
+                rating = pos[2]
+                new_tag = f"[{trade_date} | {ticker} | {rating} | {raw_pct} | {alpha_pct} | {holding_days}d"
+                if kv.get("P"):
+                    new_tag += f" | P={kv['P']}"
+                if kv.get("H"):
+                    new_tag += f" | H={kv['H']}"
+                if cagr is not None:
+                    new_tag += f" | CAGR={cagr:+.1%}"
+                new_tag += "]"
                 rest = "\n".join(lines[1:])
                 new_blocks.append(f"{new_tag}\n\n{rest.lstrip()}\n\nREFLECTION:\n{reflection}")
                 updated = True
@@ -178,17 +205,26 @@ class DecisionLog:
         tag = lines[0].strip()
         if not (tag.startswith("[") and tag.endswith("]")):
             return None
-        fields = [f.strip() for f in tag[1:-1].split("|")]
-        if len(fields) < 4:
+        # Split tag into positional fields and key=value tokens (P=, H=, CAGR=).
+        pos, kv = [], {}
+        for f in (x.strip() for x in tag[1:-1].split("|")):
+            if "=" in f:
+                k, _, v = f.partition("=")
+                kv[k.strip()] = v.strip()
+            else:
+                pos.append(f)
+        if len(pos) < 4:
             return None
+        pending = pos[3] == "pending"
         body = "\n".join(lines[1:]).strip()
         dm, rm = _DECISION_RE.search(body), _REFLECTION_RE.search(body)
         return {
-            "date": fields[0], "ticker": fields[1], "rating": fields[2],
-            "pending": fields[3] == "pending",
-            "raw": fields[3] if fields[3] != "pending" else None,
-            "alpha": fields[4] if len(fields) > 4 else None,
-            "holding": fields[5] if len(fields) > 5 else None,
+            "date": pos[0], "ticker": pos[1], "rating": pos[2],
+            "pending": pending,
+            "raw": None if pending else pos[3],
+            "alpha": None if pending else (pos[4] if len(pos) > 4 else None),
+            "holding": None if pending else (pos[5] if len(pos) > 5 else None),
+            "prob": kv.get("P"), "horizon": kv.get("H"), "cagr": kv.get("CAGR"),
             "decision": dm.group(1).strip() if dm else "",
             "reflection": rm.group(1).strip() if rm else "",
         }
@@ -209,25 +245,72 @@ class DecisionLog:
         return f"{tag}\n{text}{'...' if len(e['decision']) > 300 else ''}"
 
 
-def fetch_returns(ticker: str, trade_date: str, holding_days: int = 5):
-    """Return (raw, alpha, actual_days) over holding_days from trade_date, or (None,)*3."""
+_DAYS_PER_MONTH = 30.44
+
+
+def months_to_days(months: float) -> int:
+    return int(round(months * _DAYS_PER_MONTH))
+
+
+class ReturnResult:
+    """Realised return over a calendar window, with CAGR for multi-year horizons."""
+
+    def __init__(self, raw, alpha, elapsed_days, benchmark, cagr, target_days, reached):
+        self.raw = raw
+        self.alpha = alpha
+        self.elapsed_days = elapsed_days
+        self.benchmark = benchmark
+        self.cagr = cagr
+        self.target_days = target_days
+        self.reached = reached  # has the full target horizon elapsed yet?
+
+
+def fetch_returns(ticker: str, trade_date: str, horizon_days: int = 5) -> Optional[ReturnResult]:
+    """Realised raw/alpha/CAGR from trade_date to trade_date+horizon_days (calendar).
+
+    Uses the last available close at or before the target date, so it works for
+    both short windows and multi-year horizons. Returns None if there is not yet
+    at least one trading row after the entry. ``reached`` is False when the
+    target horizon has not fully elapsed (i.e. this is an interim mark-to-market,
+    not a final outcome).
+    """
     import yfinance as yf
 
     benchmark = resolve_benchmark(ticker)
     try:
         start = datetime.strptime(trade_date, "%Y-%m-%d")
-        end_str = (start + timedelta(days=holding_days + 7)).strftime("%Y-%m-%d")
+        target = start + timedelta(days=horizon_days)
+        # Fetch a little past the target so the target date itself is covered.
+        end_str = (target + timedelta(days=7)).strftime("%Y-%m-%d")
         stock = yf.Ticker(ticker).history(start=trade_date, end=end_str)
         bench = yf.Ticker(benchmark).history(start=trade_date, end=end_str)
         if len(stock) < 2 or len(bench) < 2:
-            return None, None, None, benchmark
-        actual = min(holding_days, len(stock) - 1, len(bench) - 1)
-        raw = float((stock["Close"].iloc[actual] - stock["Close"].iloc[0]) / stock["Close"].iloc[0])
-        bench_ret = float((bench["Close"].iloc[actual] - bench["Close"].iloc[0]) / bench["Close"].iloc[0])
-        return raw, raw - bench_ret, actual, benchmark
+            return None
+
+        def _at_target(df):
+            # Last row dated on/before the target; falls back to the final row.
+            idx = df.index
+            tz = idx.tz
+            cutoff = target if tz is None else target.replace(tzinfo=tz) if hasattr(target, "replace") else target
+            try:
+                mask = idx <= cutoff
+                pos = int(mask.sum()) - 1
+            except TypeError:
+                pos = len(df) - 1
+            return max(1, min(pos, len(df) - 1))
+
+        s_pos, b_pos = _at_target(stock), _at_target(bench)
+        s0, s1 = float(stock["Close"].iloc[0]), float(stock["Close"].iloc[s_pos])
+        b0, b1 = float(bench["Close"].iloc[0]), float(bench["Close"].iloc[b_pos])
+        raw = s1 / s0 - 1.0
+        bench_ret = b1 / b0 - 1.0
+        elapsed = (stock.index[s_pos].to_pydatetime().replace(tzinfo=None) - start).days or 1
+        cagr = (1.0 + raw) ** (365.25 / elapsed) - 1.0 if elapsed > 0 and raw > -1 else None
+        reached = elapsed >= horizon_days * 0.95
+        return ReturnResult(raw, raw - bench_ret, elapsed, benchmark, cagr, horizon_days, reached)
     except Exception as exc:  # noqa: BLE001
         print(f"WARN: could not compute returns for {ticker} @ {trade_date}: {exc}", file=sys.stderr)
-        return None, None, None, benchmark
+        return None
 
 
 # --- subcommands ----------------------------------------------------------
@@ -248,10 +331,19 @@ def cmd_log(args, log: DecisionLog) -> None:
     if not decision.strip():
         print("ERROR: empty decision text (provide --file, --text, or pipe via stdin)", file=sys.stderr)
         raise SystemExit(2)
+    if args.prob is not None and not (0.0 <= args.prob <= 1.0):
+        print("ERROR: --prob must be a probability in [0,1]", file=sys.stderr)
+        raise SystemExit(2)
     rating = parse_rating(decision)
-    wrote = log.store_decision(args.ticker, args.trade_date, decision)
+    wrote = log.store_decision(args.ticker, args.trade_date, decision,
+                               prob=args.prob, horizon_months=args.horizon_months)
+    extra = ""
+    if args.prob is not None:
+        extra += f" | P={args.prob:.2f}"
+    if args.horizon_months:
+        extra += f" | H={args.horizon_months}mo"
     if wrote:
-        print(f"Logged [{args.trade_date} | {args.ticker} | {rating} | pending] -> {log.path}")
+        print(f"Logged [{args.trade_date} | {args.ticker} | {rating} | pending{extra}] -> {log.path}")
     else:
         print(f"Already logged (pending) for {args.trade_date} | {args.ticker}; left unchanged.")
 
@@ -265,16 +357,25 @@ def cmd_pending(args, log: DecisionLog) -> None:
         print(f"[{e['date']} | {e['ticker']} | {e['rating']} | pending]")
 
 
+def _horizon_days(args) -> int:
+    """Resolve the return window: --horizon-months takes precedence over --holding-days."""
+    if getattr(args, "horizon_months", None):
+        return months_to_days(args.horizon_months)
+    return args.holding_days
+
+
 def cmd_returns(args, log: DecisionLog) -> None:
-    raw, alpha, days, bench = fetch_returns(args.ticker, args.trade_date, args.holding_days)
-    if raw is None:
-        print(f"NO_DATA: not enough price history yet for {args.ticker} since {args.trade_date} "
-              f"(benchmark {bench}). Try again after more trading days.")
+    r = fetch_returns(args.ticker, args.trade_date, _horizon_days(args))
+    if r is None:
+        print(f"NO_DATA: not enough price history yet for {args.ticker} since {args.trade_date}. "
+              f"Try again after more trading days.")
         raise SystemExit(1)
-    print(f"Ticker: {args.ticker}  Trade date: {args.trade_date}  Benchmark: {bench}")
-    print(f"Raw return: {raw:+.1%}")
-    print(f"Alpha vs {bench}: {alpha:+.1%}")
-    print(f"Holding days: {days}")
+    print(f"Ticker: {args.ticker}  Trade date: {args.trade_date}  Benchmark: {r.benchmark}")
+    print(f"Raw return: {r.raw:+.1%}")
+    print(f"Alpha vs {r.benchmark}: {r.alpha:+.1%}")
+    print(f"Elapsed: {r.elapsed_days} calendar days" + ("" if r.reached else "  (horizon NOT yet reached — interim mark-to-market)"))
+    if r.cagr is not None:
+        print(f"CAGR: {r.cagr:+.1%}")
 
 
 def cmd_resolve(args, log: DecisionLog) -> None:
@@ -282,15 +383,86 @@ def cmd_resolve(args, log: DecisionLog) -> None:
     if not reflection:
         print("ERROR: provide --reflection-file or --reflection (Claude's one-paragraph reflection)", file=sys.stderr)
         raise SystemExit(2)
-    raw, alpha, days, bench = fetch_returns(args.ticker, args.trade_date, args.holding_days)
-    if raw is None:
+    r = fetch_returns(args.ticker, args.trade_date, _horizon_days(args))
+    if r is None:
         print(f"NO_DATA: not enough price history yet to resolve {args.ticker} @ {args.trade_date}.")
         raise SystemExit(1)
-    ok = log.update_with_outcome(args.ticker, args.trade_date, raw, alpha, f"{days}", reflection)
+    if not r.reached and not args.force:
+        print(f"Horizon NOT yet reached for {args.ticker} @ {args.trade_date} "
+              f"({r.elapsed_days}d of {r.target_days}d elapsed). "
+              f"Use 'returns' for an interim mark, or pass --force to resolve early.")
+        raise SystemExit(1)
+    ok = log.update_with_outcome(args.ticker, args.trade_date, r.raw, r.alpha,
+                                 f"{r.elapsed_days}", reflection, cagr=r.cagr)
     if ok:
-        print(f"Resolved [{args.trade_date} | {args.ticker}] raw {raw:+.1%} / alpha vs {bench} {alpha:+.1%} / {days}d.")
+        cagr_s = f" / CAGR {r.cagr:+.1%}" if r.cagr is not None else ""
+        print(f"Resolved [{args.trade_date} | {args.ticker}] raw {r.raw:+.1%} / "
+              f"alpha vs {r.benchmark} {r.alpha:+.1%}{cagr_s} / {r.elapsed_days}d.")
     else:
         print(f"No matching pending entry for {args.trade_date} | {args.ticker} (already resolved?).")
+
+
+def _pct_to_float(s) -> Optional[float]:
+    if not s:
+        return None
+    try:
+        return float(str(s).replace("%", "").replace("+", "").strip()) / 100.0
+    except ValueError:
+        return None
+
+
+def cmd_score(args, log: DecisionLog) -> None:
+    """Calibration & skill scorecard over resolved predictions.
+
+    Reports hit-rate (beat benchmark), mean alpha/CAGR, and — when forecast
+    probabilities were logged — a Brier score plus Brier Skill Score vs the
+    base-rate baseline. This is how you tell whether the framework has *edge*
+    rather than just direction.
+    """
+    entries = [e for e in log.load_entries()
+               if not e["pending"] and (args.ticker is None or e["ticker"] == args.ticker)]
+    resolved = [e for e in entries if _pct_to_float(e["alpha"]) is not None]
+    if not resolved:
+        print("(no resolved predictions to score yet)")
+        return
+
+    alphas = [_pct_to_float(e["alpha"]) for e in resolved]
+    raws = [_pct_to_float(e["raw"]) for e in resolved if _pct_to_float(e["raw"]) is not None]
+    cagrs = [_pct_to_float(e["cagr"]) for e in resolved if _pct_to_float(e["cagr"]) is not None]
+    wins = [a for a in alphas if a > 0]
+    hit_rate = len(wins) / len(alphas)
+
+    print(f"=== Prediction scorecard{(' — ' + args.ticker) if args.ticker else ''} ===")
+    print(f"Resolved predictions: {len(resolved)}")
+    print(f"Hit-rate (beat benchmark): {hit_rate:.0%} ({len(wins)}/{len(alphas)})")
+    print(f"Mean alpha: {sum(alphas)/len(alphas):+.1%}  |  median alpha: {sorted(alphas)[len(alphas)//2]:+.1%}")
+    if raws:
+        print(f"Mean raw return: {sum(raws)/len(raws):+.1%}")
+    if cagrs:
+        print(f"Mean CAGR: {sum(cagrs)/len(cagrs):+.1%}")
+
+    # --- Brier calibration over entries that carried a forecast probability ---
+    probbed = [(float(e["prob"]), 1.0 if _pct_to_float(e["alpha"]) > 0 else 0.0)
+               for e in resolved if e["prob"]]
+    if probbed:
+        brier = sum((p - o) ** 2 for p, o in probbed) / len(probbed)
+        base = sum(o for _, o in probbed) / len(probbed)
+        base_brier = sum((base - o) ** 2 for _, o in probbed) / len(probbed)
+        bss = 1 - brier / base_brier if base_brier > 0 else float("nan")
+        print(f"\nCalibration (n={len(probbed)} with forecast P):")
+        print(f"  Brier score: {brier:.3f}  (lower is better; 0=perfect, 0.25=coin-flip)")
+        print(f"  Base-rate Brier: {base_brier:.3f}  |  Brier Skill Score: {bss:+.2f} (>0 = beats base rate)")
+    else:
+        print("\n(no forecast probabilities logged yet — log with --prob to enable Brier calibration)")
+
+    # --- rating monotonicity: do bullish ratings earn more alpha? ---
+    bull = [a for e, a in zip(resolved, alphas) if e["rating"] in ("Buy", "Overweight")]
+    flat = [a for e, a in zip(resolved, alphas) if e["rating"] == "Hold"]
+    bear = [a for e, a in zip(resolved, alphas) if e["rating"] in ("Underweight", "Sell")]
+    print("\nMean alpha by rating tier (want bullish > Hold > bearish):")
+    for label, grp in (("Buy/Overweight", bull), ("Hold", flat), ("Underweight/Sell", bear)):
+        if grp:
+            print(f"  {label:18} {sum(grp)/len(grp):+.1%}  (n={len(grp)})")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -302,18 +474,23 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("recall", help="print past lessons for a ticker (inject at start of analysis)")
     s.add_argument("ticker"); s.set_defaults(func=cmd_recall)
 
-    s = sub.add_parser("log", help="append a pending decision entry")
+    s = sub.add_parser("log", help="append a pending decision entry (with forecast P + horizon)")
     s.add_argument("ticker"); s.add_argument("trade_date")
     s.add_argument("--file", help="read decision markdown from this file")
     s.add_argument("--text", help="decision text inline (else read stdin)")
+    s.add_argument("--prob", type=float, default=None,
+                   help="forecast P(beats benchmark over horizon), 0..1 — enables Brier scoring")
+    s.add_argument("--horizon-months", type=int, default=None,
+                   help="forecast horizon in months (e.g. 24); used when resolving")
     s.set_defaults(func=cmd_log)
 
     s = sub.add_parser("pending", help="list entries awaiting an outcome")
     s.add_argument("ticker", nargs="?", default=None); s.set_defaults(func=cmd_pending)
 
-    s = sub.add_parser("returns", help="compute realised raw/alpha return from prices")
+    s = sub.add_parser("returns", help="compute realised raw/alpha/CAGR return from prices")
     s.add_argument("ticker"); s.add_argument("trade_date")
-    s.add_argument("--holding-days", type=int, default=5)
+    s.add_argument("--holding-days", type=int, default=5, help="window in calendar days (short-horizon)")
+    s.add_argument("--horizon-months", type=int, default=None, help="window in months (preferred; overrides --holding-days)")
     s.set_defaults(func=cmd_returns)
 
     s = sub.add_parser("resolve", help="attach realised return + reflection to a pending entry")
@@ -321,7 +498,13 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--reflection-file", help="file with Claude's one-paragraph reflection")
     s.add_argument("--reflection", help="reflection text inline")
     s.add_argument("--holding-days", type=int, default=5)
+    s.add_argument("--horizon-months", type=int, default=None, help="forecast horizon in months (preferred)")
+    s.add_argument("--force", action="store_true", help="resolve even if the full horizon has not elapsed")
     s.set_defaults(func=cmd_resolve)
+
+    s = sub.add_parser("score", help="calibration & skill scorecard over resolved predictions")
+    s.add_argument("ticker", nargs="?", default=None)
+    s.set_defaults(func=cmd_score)
 
     return p
 
