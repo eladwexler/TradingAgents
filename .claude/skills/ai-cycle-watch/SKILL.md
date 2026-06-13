@@ -100,7 +100,7 @@ Write the report to `ai-cycle-reports/<DATE>_cycle.md` (repo-relative; create th
 3. **Phase + timeline** — where we are, sentiment-vs-structural distinction, the sequence to position for.
 4. **Survivor / casualty** — two short lists (or scored watchlist), with the one-reason-each.
 5. **Data caveat + disclaimer** — note any Unknown indicators / sources that returned nothing, and the standard not-financial-advice line.
-6. **Idiot Investor Summary** — A summary clause at the very end giving a score 0-100 of the "current risk per AI cake" (using Jensen Huang's "AI cake" metaphor about the AI infrastructure build-out) in really simple words for the idiot investor.
+6. **Idiot Investor Summary (Jensen's Take)** — A summary clause at the very end giving the true risk score 0-100 of the "current risk per AI cake". Explain the score in really simple, plain English (idiot-proof) but keep a SERIOUS and professional tone. Adopt Jensen Huang's perspective: frame the AI build-out as a massive "AI cake" (total addressable market/opportunity) where the shift to accelerated computing and "AI factories" is a mandatory industrial revolution. Do not use silly baking metaphors; simply explain the serious underlying infrastructure reality versus the macro noise.
 
 ## Notes & failure modes
 - Data deps for `ta_data.py`: `pip install -r .claude/skills/trading-analysis/scripts/requirements.txt` (no keys) if a `ModuleNotFoundError` appears.
