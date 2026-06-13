@@ -88,6 +88,13 @@ Using all four analyst reports, run `max_debate_rounds` rounds (default 1). Each
 ### Stage 3 — Research Manager → investment plan
 Critically judge the debate and commit to a clear stance using exactly one rating: **Buy / Overweight / Hold / Underweight / Sell** (reserve Hold for genuinely balanced evidence). Produce an actionable investment plan for the trader.
 
+**Rating scale in plain words** ("weight" = how big a slice of the portfolio the stock gets vs. a neutral benchmark weight). Always gloss the chosen rating in plain language in the final output so a non-expert understands it:
+- **Buy** — "Own a lot of this." Strong conviction; full or larger-than-normal position.
+- **Overweight** — "Own more than average, but not a hero bet." Positive with caveats (e.g. high risk); take a position **smaller than a Buy**, sized for the risk.
+- **Hold** — "Neither add nor sell." Evidence is genuinely two-sided; keep existing holdings, no new money.
+- **Underweight** — "Own less than average." Lean negative but not a hard exit; trim or hold only a token amount.
+- **Sell** — "Don't own it." Exit or avoid.
+
 ### Stage 4 — Trader → transaction proposal
 Turn the investment plan into a concrete proposal anchored in the analyst reports and plan: direction, conviction, rough sizing/entry logic, and key risks to monitor.
 
@@ -115,7 +122,7 @@ The log entry is stored `pending`; a later run resolves it with the realised ret
 ## Output format
 
 Present, in this order:
-1. **Final decision** up top: `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**` + the five-tier rating + **VERDICT FOR NEW INVESTORS** + 2–3 sentence rationale.
+1. **Final decision** up top: `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**` + the five-tier rating (with a short plain-words gloss, e.g. *Overweight — "own more than average, but sized small for the risk"*) + **VERDICT FOR NEW INVESTORS** + 2–3 sentence rationale.
 2. Collapsible/clearly-headed sections for each stage (4 analyst reports → research debate + plan → trader proposal → risk debate → PM decision).
 3. A one-line **data caveat** noting any source that returned no data / fell back, and the standard not-financial-advice disclaimer.
 
