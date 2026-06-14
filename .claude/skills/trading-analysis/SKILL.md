@@ -1,6 +1,6 @@
 ---
 name: trading-analysis
-description: Run a TradingAgents-style multi-agent stock/asset analysis without any LLM API key, producing a calibrated 12–36 month return forecast — Claude plays every agent role (analysts, bull/bear researchers, trader, risk debate, portfolio manager) while reusing the project's own data-fetching scripts. Outputs bear/base/bull total-return scenarios, expected CAGR, and P(beats benchmark), then logs the forecast for later Brier-scoring. Use when the user asks to analyze a ticker, get a BUY/HOLD/SELL view or a multi-year price/return prediction, run "the trading agents", or do multi-agent financial analysis on a symbol and date.
+description: Run a TradingAgents-style multi-agent stock/asset analysis without any LLM API key, producing a calibrated 12–36 month return forecast — Claude plays every agent role (analysts, bull/bear researchers, trader, risk debate, portfolio manager) while reusing the project's own data-fetching scripts. Outputs bear/base/bull total-return scenarios, expected CAGR, and P(beats benchmark), then logs the forecast for later Brier-scoring. Concludes with a qualitative "Jensen Brain Verdict" — would Jensen Huang / NVIDIA strategically back the company — sourced from an index of 100+ Jensen Huang interviews. Use when the user asks to analyze a ticker, get a BUY/HOLD/SELL view or a multi-year price/return prediction, run "the trading agents", or do multi-agent financial analysis on a symbol and date.
 ---
 
 # Trading Analysis — 12–36 month prediction tool (key-free, Claude-as-agents)
@@ -143,10 +143,43 @@ Then map to the decision lines (the 5-tier rating must be *consistent* with the 
 
 Include a specific **VERDICT FOR NEW INVESTORS** stating whether it's a suitable entry over the 12–36mo horizon, explicitly stating the projected target prices in dollars, given both views and the bear-case drawdown they must be able to survive.
 
+### Stage 6.5 — Jensen Brain Verdict (NVIDIA strategic-fit lens)
+After the PM decision, add a **Jensen Brain Verdict**: would **Jensen Huang / NVIDIA
+strategically back this company** (invest, partner, acquire, or champion it), judged
+only from what Jensen has actually said? This is a separate **qualitative** lens — a
+secular sanity-check on whether the name sits with or against NVIDIA's platform — and
+it appears **at the end of the verdict**. It does **not** alter the Brier-scored
+forecast, the Expected-Return Model, or the BASE/MACRO ratings (keep those clean);
+treat it like the Shay Boloor verdict — surfaced, not score-moving.
+
+Run the bridge to the Jensen brain (a BM25 index over 100+ Jensen interview/keynote
+transcripts in the companion `jensen` project). From the repo root, pass good alias
+terms — company, CEO, flagship products/tickers — plus the NVIDIA theses it touches:
+
+```
+python3 .claude/skills/trading-analysis/scripts/jensen_brain.py \
+    "<company> <CEO> <products/aliases>" \
+    --sector "<the NVIDIA theses it touches: accelerated computing / AI factories / physical AI / robotics / autonomous vehicles / sovereign AI / digital biology / CUDA ecosystem>" \
+    --k 5
+```
+(Set `JENSEN_HOME` if the jensen project lives elsewhere; default `/home/ewexler/projects/jensen-brain`.
+ If the bridge reports the index is missing, note Jensen Brain as unavailable and skip — do not fabricate.)
+
+The bridge returns four passage groups (direct mentions, sector/thesis fit,
+competition/substitution risk, partnership philosophy) and a **coverage signal**.
+From them, decide one verdict, grounded in Jensen's recurring theses — companies that
+**consume/extend** the NVIDIA platform lean *Likely*; those building **substitutes**
+(rival GPUs/ASICs/TPUs, competing stacks) lean *Unlikely*; distinguish *Jensen
+praising/using* a company from *NVIDIA backing* it. Map to:
+
+- **Jensen Brain Verdict:** Likely back / Possible / Unlikely back / Insufficient evidence — with confidence (low/med/high).
+- **Why:** 2–4 bullets tying the company to specific Jensen theses + its NVIDIA relationship (customer / partner / supplier / competitor).
+- **In his words:** 1–3 short quoted snippets, each cited `(<date> — <video title>, <url>)`. Quote only retrieved text; never invent quotes. If `top_direct_score` is low, say the corpus is thin and lean on sector fit.
+
 ### Stage 7 — Persist the decision
 Save the final decision to a per-ticker file **and** append it to the memory log so the next run can learn from it.
 
-1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with the base proposal, macro-adjusted proposal, the `VERDICT FOR NEW INVESTORS:` line, the ratings, **and the forecast block (expected total return + scenarios + P(beats benchmark) + horizon)** so they parse cleanly, followed by the decision summary, key evidence, and the plan.
+1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with the base proposal, macro-adjusted proposal, the `VERDICT FOR NEW INVESTORS:` line, the ratings, **and the forecast block (expected total return + scenarios + P(beats benchmark) + horizon)** so they parse cleanly, followed by the decision summary, key evidence, the plan, and the **`Jensen Brain Verdict:` line** at the end.
 2. Log it **with the forecast probability and horizon** (so it can be Brier-scored at maturity):
 ```
 mkdir -p analyzed-stocks/TICKER
@@ -170,6 +203,7 @@ Present, in this order:
 
    …with the scenario probabilities and the one dominant swing factor noted beneath.
 2. **Decision**: both `FINAL TRANSACTION PROPOSAL (BASE): **BUY/HOLD/SELL**` and `FINAL TRANSACTION PROPOSAL (MACRO-ADJUSTED): **BUY/HOLD/SELL**` + their five-tier ratings (with a short plain-words gloss, e.g. *Overweight — "own more than average, but sized small for the risk"*) + **VERDICT FOR NEW INVESTORS** combining both views into a 2–3 sentence rationale anchored on the horizon and the survivable bear-case drawdown. **For a new buyer, fold the Shay Boloor Verdict in here as entry-timing only** — i.e. whether to start the position now or wait for a better entry — without letting it move the BASE/MACRO call. If the extension warning fired, explicitly note that the entry is stretched and that new-money sizing should be smaller.
+   Then, **at the very end of the verdict**, append the **Jensen Brain Verdict** (Stage 6.5): `Jensen Brain Verdict: **Likely back / Possible / Unlikely back / Insufficient evidence**` + confidence, 2–4 why-bullets, and 1–3 cited quotes. Present it as a qualitative NVIDIA-strategic-fit lens that does **not** move the BASE/MACRO call or the forecast numbers.
 3. Collapsible/clearly-headed sections for each stage (4 analyst reports incl. the Expected-Return Model → research debate + plan → trader proposal → risk debate → PM decision).
 4. A one-line **data caveat** noting any source that returned no data / fell back, plus the reminder that a multi-year point forecast is uncertain, and the standard not-financial-advice disclaimer.
 5. **Appendix — Shay Boloor Verdict (timing reference).** Reproduce the snapshot's verdict (🟢 BULLISH / 🟡 HOLD / 🔴 BEARISH), the levels table, and any qualifier warnings (slope, volume, extension). This is the at-a-glance momentum/structure read for **timing a new entry** and an informational check for **someone already holding** — it does not feed the multi-year forecast or justify trimming an existing position.
