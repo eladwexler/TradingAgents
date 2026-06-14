@@ -30,7 +30,9 @@ def get_indicator(
     supported_indicators = {
         "close_50_sma": ("50 SMA", "close"),
         "close_200_sma": ("200 SMA", "close"),
+        "close_9_ema": ("9 EMA", "close"),
         "close_10_ema": ("10 EMA", "close"),
+        "close_21_ema": ("21 EMA", "close"),
         "macd": ("MACD", "close"),
         "macds": ("MACD Signal", "close"),
         "macdh": ("MACD Histogram", "close"),
@@ -45,7 +47,9 @@ def get_indicator(
     indicator_descriptions = {
         "close_50_sma": "50 SMA: A medium-term trend indicator. Usage: Identify trend direction and serve as dynamic support/resistance. Tips: It lags price; combine with faster indicators for timely signals.",
         "close_200_sma": "200 SMA: A long-term trend benchmark. Usage: Confirm overall market trend and identify golden/death cross setups. Tips: It reacts slowly; best for strategic trend confirmation rather than frequent trading entries.",
+        "close_9_ema": "9 EMA: A fast momentum average. Usage: Part of the 9/21 EMA trend-structure system — when the 9 EMA is above the 21 EMA, short-term momentum is bullish. Tips: Sensitive to noise; always pair with the 21 EMA and the 50/200 SMA structure check.",
         "close_10_ema": "10 EMA: A responsive short-term average. Usage: Capture quick shifts in momentum and potential entry points. Tips: Prone to noise in choppy markets; use alongside longer averages for filtering false signals.",
+        "close_21_ema": "21 EMA: An intermediate momentum average. Usage: Part of the 9/21 EMA trend-structure system — when the 9 EMA crosses below the 21 EMA, momentum is fading. Tips: Smoother than the 9 EMA; the 9/21 crossover is a momentum-shift signal, not a thesis driver.",
         "macd": "MACD: Computes momentum via differences of EMAs. Usage: Look for crossovers and divergence as signals of trend changes. Tips: Confirm with other indicators in low-volatility or sideways markets.",
         "macds": "MACD Signal: An EMA smoothing of the MACD line. Usage: Use crossovers with the MACD line to trigger trades. Tips: Should be part of a broader strategy to avoid false positives.",
         "macdh": "MACD Histogram: Shows the gap between the MACD line and its signal. Usage: Visualize momentum strength and spot divergence early. Tips: Can be volatile; complement with additional filters in fast-moving markets.",
@@ -90,11 +94,27 @@ def get_indicator(
                 "series_type": series_type,
                 "datatype": "csv"
             })
+        elif indicator == "close_9_ema":
+            data = _make_api_request("EMA", {
+                "symbol": symbol,
+                "interval": interval,
+                "time_period": "9",
+                "series_type": series_type,
+                "datatype": "csv"
+            })
         elif indicator == "close_10_ema":
             data = _make_api_request("EMA", {
                 "symbol": symbol,
                 "interval": interval,
                 "time_period": "10",
+                "series_type": series_type,
+                "datatype": "csv"
+            })
+        elif indicator == "close_21_ema":
+            data = _make_api_request("EMA", {
+                "symbol": symbol,
+                "interval": interval,
+                "time_period": "21",
                 "series_type": series_type,
                 "datatype": "csv"
             })
@@ -165,7 +185,7 @@ def get_indicator(
         col_name_map = {
             "macd": "MACD", "macds": "MACD_Signal", "macdh": "MACD_Hist",
             "boll": "Real Middle Band", "boll_ub": "Real Upper Band", "boll_lb": "Real Lower Band",
-            "rsi": "RSI", "atr": "ATR", "close_10_ema": "EMA",
+            "rsi": "RSI", "atr": "ATR", "close_9_ema": "EMA", "close_10_ema": "EMA", "close_21_ema": "EMA",
             "close_50_sma": "SMA", "close_200_sma": "SMA"
         }
 

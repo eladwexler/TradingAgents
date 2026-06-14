@@ -319,8 +319,8 @@ def cmd_gather(args) -> None:
     ticker, curr = args.ticker, args.curr_date
     price_start = (datetime.strptime(curr, "%Y-%m-%d") - timedelta(days=args.price_window)).strftime("%Y-%m-%d")
     news_start = _seven_days_back(curr)
-    indicators = ["close_50_sma", "close_200_sma", "close_10_ema", "macd",
-                  "rsi", "boll", "atr", "vwma"]
+    indicators = ["close_9_ema", "close_21_ema", "close_50_sma", "close_200_sma",
+                   "close_10_ema", "macd", "rsi", "boll", "atr", "vwma"]
     is_crypto = ticker.upper().endswith(("-USD", "-USDT"))
 
     def safe(label, fn):
