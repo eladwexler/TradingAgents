@@ -42,18 +42,31 @@ def load_search_module(home):
     return mod
 
 
-def emit(title, hits):
+def src_tag(d):
+    """Label a hit by provenance: what Jensen *said* vs what NVIDIA *did/announced*."""
+    s = d.get("source", "jensen")
+    return "JENSEN-SAID" if s == "jensen" else f"NVDA-ANNOUNCED ({s})"
+
+
+def emit(title, hits, empty="(no matching passages — corpus may not cover this directly)"):
     print(f"\n## {title}  ({len(hits)} passages)")
     if not hits:
-        print("(no matching passages — Jensen's corpus may not cover this directly)")
+        print(empty)
         return
     for rank, (score, d) in enumerate(hits, 1):
         snippet = " ".join(d["text"].split())
         if len(snippet) > 900:
             snippet = snippet[:900] + " …"
-        print(f"\n[{rank}] score={score:.2f}  {d.get('date','?')}  {d.get('title','')[:80]}")
+        print(f"\n[{rank}] score={score:.2f}  [{src_tag(d)}]  {d.get('date','?')}  {d.get('title','')[:80]}")
         print(f"    {d.get('url','')}")
         print(f"    {snippet}")
+
+
+def split_by_source(hits):
+    """(jensen_hits, nvda_hits) — what he said vs what NVIDIA published."""
+    jen = [(s, d) for s, d in hits if d.get("source", "jensen") == "jensen"]
+    nv = [(s, d) for s, d in hits if d.get("source", "jensen") != "jensen"]
+    return jen, nv
 
 
 def main():
@@ -74,18 +87,28 @@ def main():
     if args.sector:
         print(f"sector query: {args.sector!r}")
 
-    direct = bm.search(direct_q, k=args.k, per_doc=1)
-    emit("DIRECT MENTIONS", direct)
+    # Pull a wide direct sweep, then separate Jensen's words from NVIDIA's actions so a
+    # reader can answer both "did NVIDIA do anything here" and "did *he* mention it".
+    wide = bm.search(direct_q, k=max(args.k * 4, 20), per_doc=2)
+    jen_direct, nvda_direct = split_by_source(wide)
+
+    emit("DIRECT MENTIONS — JENSEN (what he said)", jen_direct[:args.k],
+         empty="(Jensen does not mention this company directly in the transcript corpus)")
+    emit("NVIDIA ACTIONS / ANNOUNCEMENTS (what NVIDIA published)", nvda_direct[:args.k],
+         empty="(no NVIDIA press/blog item mentions this — run `python3 work/fetch_nvidia.py` to refresh)")
     if args.sector:
         emit("SECTOR / THESIS FIT", bm.search(args.sector, k=args.k, per_doc=1))
     emit("COMPETITION / SUBSTITUTION RISK", bm.search(COMPETITION_Q, k=3, per_doc=1))
     emit("JENSEN PARTNERSHIP / INVESTMENT PHILOSOPHY", bm.search(PHILOSOPHY_Q, k=3, per_doc=1))
 
-    # coverage signal: top direct-hit score tells whether the company is really discussed
-    top = direct[0][0] if direct else 0.0
+    # coverage signal: separate "Jensen mentioned it" from "NVIDIA acted on it"
+    jen_top = jen_direct[0][0] if jen_direct else 0.0
+    nvda_top = nvda_direct[0][0] if nvda_direct else 0.0
     print(f"\n## COVERAGE SIGNAL")
-    print(f"top_direct_score={top:.2f}  "
-          f"({'well covered' if top >= 12 else 'thin / tangential — lean on sector fit and say so' if top > 0 else 'not mentioned — reason from sector fit only'})")
+    print(f"jensen_top_score={jen_top:.2f}  "
+          f"({'Jensen discusses it' if jen_top >= 12 else 'thin / tangential — lean on sector fit and say so' if jen_top > 0 else 'Jensen never mentions it — reason from sector fit only'})")
+    print(f"nvda_action_score={nvda_top:.2f}  "
+          f"({'NVIDIA has published action(s) involving it' if nvda_top >= 12 else 'only weak/indirect NVIDIA references' if nvda_top > 0 else 'no NVIDIA announcement on record (corpus may be stale — refresh feeds)'})")
 
 
 if __name__ == "__main__":
