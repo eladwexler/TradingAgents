@@ -685,10 +685,15 @@ def compute_changes(recs, by_ticker, rx_cur, rx_prev):
         prev = runs[-2]
         sub = f'{prev["date"]} → {cur["date"]}'
         # rating flip (both sides must be present — ignore newly-added fields)
-        if cur["rating"] and prev["rating"] and rating_score(cur["rating"]) != rating_score(prev["rating"]):
-            ev.append({"group": "flip", "ticker": tk, "date": cur["date"], "field": "Rating",
-                       "old": prev["rating"] or "—", "new": cur["rating"] or "—",
-                       "ocls": cls_rating(prev["rating"]), "ncls": cls_rating(cur["rating"]), "sub": sub})
+        ps, cs = rating_score(prev["rating"]), rating_score(cur["rating"])
+        if cur["rating"] and prev["rating"] and ps != cs:
+            e = {"group": "flip", "ticker": tk, "date": cur["date"], "field": "Rating",
+                 "old": prev["rating"] or "—", "new": cur["rating"] or "—",
+                 "ocls": cls_rating(prev["rating"]), "ncls": cls_rating(cur["rating"]), "sub": sub}
+            # a REVERSAL = stance crossed the neutral line (bullish <-> bearish) — actionable
+            if ps is not None and cs is not None and ps * cs < 0:
+                e["reversal"] = "to-bull" if cs > 0 else "to-bear"
+            ev.append(e)
         # combined verdict flip
         if cur["combined"] and prev["combined"] and (cur["combined"]).upper() != (prev["combined"]).upper():
             ev.append({"group": "flip", "ticker": tk, "date": cur["date"], "field": "Combined",
@@ -766,7 +771,8 @@ def build_changes(ev, rx_prev):
     if groups["flip"]:
         rows = ""
         for e in sorted(groups["flip"], key=lambda e: (e["date"], e["ticker"]), reverse=True):
-            rows += (f'<li><b>{e["ticker"]}</b> <span class="cf">{e["field"]}</span> '
+            mark = ' <span class="b-pos" title="reversal">🔄</span>' if e.get("reversal") else ""
+            rows += (f'<li><b>{e["ticker"]}</b>{mark} <span class="cf">{e["field"]}</span> '
                      f'<span class="badge {e["ocls"]}">{html.escape(e["old"])}</span> → '
                      f'<span class="badge {e["ncls"]}">{html.escape(e["new"])}</span> '
                      f'<span class="muted">{e["sub"]}</span></li>')
@@ -786,6 +792,43 @@ def build_changes(ev, rx_prev):
         out.append('<h2>🔬 X research shifts</h2><p class="muted">Baseline snapshot saved — '
                    'trend &amp; sentiment changes will appear here after the next refresh.</p>')
     return "\n".join(out)
+
+
+def build_reversals(ev):
+    """Directional reversals only — the rating crossed the bullish/bearish line (the
+    'flip your position' signal). Returns (html, count)."""
+    revs = [e for e in ev if e.get("reversal")]
+    if not revs:
+        return ('<p class="muted">No directional reversals in the latest run — no name crossed '
+                'between bullish (Buy/Overweight) and bearish (Sell/Underweight) since the '
+                'previous run. Milder rating changes (e.g. Hold→Buy) are in the 🔔 Changes tab.</p>', 0)
+
+    def rows(items):
+        items = sorted(items, key=lambda e: (e["date"], e["ticker"]), reverse=True)
+        if not items:
+            return '<li class="muted">none this run</li>'
+        return "".join(
+            f'<li><a href="{e["ticker"]}_{e["date"]}.html"><b>{e["ticker"]}</b></a> '
+            f'<span class="badge {e["ocls"]}">{html.escape(e["old"])}</span> → '
+            f'<span class="badge {e["ncls"]}">{html.escape(e["new"])}</span> '
+            f'<span class="muted">{e["sub"]}</span></li>' for e in items)
+
+    bull = [e for e in revs if e["reversal"] == "to-bull"]
+    bear = [e for e in revs if e["reversal"] == "to-bear"]
+    html_out = (
+        '<p class="sub" style="margin:-4px 0 12px">A <b>reversal</b> = the rating crossed the '
+        'neutral line between <b>bullish</b> (Buy/Overweight) and <b>bearish</b> '
+        '(Sell/Underweight) vs. the previous run — the strongest "flip the position" signal. '
+        'Click a ticker for its decision page.</p>'
+        f'<h2>🟢 Turned bullish <span class="muted">({len(bull)})</span> '
+        '<span class="muted" style="font-weight:400;text-transform:none">· was bearish → now '
+        'bullish · open / add candidates</span></h2>'
+        f'<ul class="chg">{rows(bull)}</ul>'
+        f'<h2>🔴 Turned bearish <span class="muted">({len(bear)})</span> '
+        '<span class="muted" style="font-weight:400;text-transform:none">· was bullish → now '
+        'bearish · trim / exit candidates</span></h2>'
+        f'<ul class="chg">{rows(bear)}</ul>')
+    return html_out, len(revs)
 
 # ---------- build ------------------------------------------------------------
 
@@ -1184,9 +1227,15 @@ def main():
     research_html = build_research(rx_cur, rx_prev)
     changes_ev, changes_n = compute_changes(recs, by_ticker, rx_cur, rx_prev)
     changes_html = build_changes(changes_ev, rx_prev)
-    changes_badge = (f'<span class="chgbadge">🔔 {changes_n} change{"s" if changes_n != 1 else ""}</span>'
-                     if changes_n else '')
+    reversals_html, reversals_n = build_reversals(changes_ev)
+    badges = ''
+    if changes_n:
+        badges += f'<span class="chgbadge">🔔 {changes_n} change{"s" if changes_n != 1 else ""}</span>'
+    if reversals_n:
+        badges += f'<span class="chgbadge revbadge">🔄 {reversals_n} reversal{"s" if reversals_n != 1 else ""}</span>'
+    changes_badge = badges
     changes_tab = f'🔔 Changes{f" ({changes_n})" if changes_n else ""}'
+    reversals_tab = f'🔄 Reversals{f" ({reversals_n})" if reversals_n else ""}'
 
     itpl = open(os.path.join(TPL, "index.html"), encoding="utf-8").read()
     idx = itpl
@@ -1196,7 +1245,8 @@ def main():
                  "{{BY_DOMAIN}}": dom_rows, "{{DOMAIN_OPTIONS}}": domain_options,
                  "{{DOMAIN_CARDS}}": dom_cards, "{{RESEARCH}}": research_html,
                  "{{CHANGES}}": changes_html, "{{CHANGES_BADGE}}": changes_badge,
-                 "{{CHANGES_TAB}}": changes_tab,
+                 "{{CHANGES_TAB}}": changes_tab, "{{REVERSALS}}": reversals_html,
+                 "{{REVERSALS_TAB}}": reversals_tab,
                  "{{TREND_INTRO}}": trend_intro, "{{TREND_CARDS}}": trend_cards,
                  "{{TABLE_ROWS}}": rows_html}.items():
         idx = idx.replace(k, v)

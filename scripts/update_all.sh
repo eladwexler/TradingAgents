@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # update_all.sh — refresh the DATA artifacts of the TradingAgents project, in one command.
 # Backs the /update-all skill's data phases. Each step is isolated: one failing never aborts
-# the rest. NOTE: this script does NOT run fresh per-ticker /trading-analysis — that is an
-# LLM pipeline (Claude plays every agent) and is orchestrated by the /update-all SKILL, which
-# sequences: (1) brains  ->  (2) fresh analyses [LLM]  ->  (3) dashboard + calibration.
+# the rest. NOTE: the LLM-driven steps live in the /update-all SKILL, not here: the
+# macro-cycle update (/ai-cycle-watch) and per-ticker /trading-analysis both need a model.
+# This script does the scriptable DATA steps only: brains -> dashboard -> calibration.
+# The SKILL sequences: brains -> /ai-cycle-watch [LLM] -> (your on-demand analyses) -> dashboard.
 #
 #   1. Brains      — scripts/update_brains.sh (ALL FIVE: Jensen NVIDIA news + Leopold
 #                    Situational-Awareness essay + Jordi @JordiVisserLabs channel & news +
@@ -91,6 +92,13 @@ fi
 
 echo
 echo "==== update_all done (data refresh) ===="
+# Macro cycle: /ai-cycle-watch is an LLM step the /update-all SKILL runs after the brains.
+# If today's report is missing, remind (a bare-script run can't generate it).
+if [ "$DO_BRAINS" = 1 ] && [ ! -f "$ROOT/ai-cycle-reports/$(date +%F)_cycle.md" ]; then
+  echo
+  echo "FYI: no ai-cycle-reports/$(date +%F)_cycle.md yet — run /ai-cycle-watch to refresh the"
+  echo "     macro phase (the /update-all skill does this automatically after the brains)."
+fi
 # Informational: /update-all refreshes data only. Fresh per-ticker /trading-analysis is run
 # ON DEMAND by you (it's an LLM pipeline). This just shows what's stale, as a convenience.
 if [ "$DO_DASH" = 1 ]; then

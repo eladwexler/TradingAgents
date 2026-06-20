@@ -78,6 +78,15 @@ and the dashboard diffs current vs the most recent older snapshot (the Research 
 inline ▲/▼/NEW trend deltas). On the first changes-enabled build the X section just says
 "baseline saved — appears after the next refresh."
 
+### Reversals tab (act-on-it signals)
+The **🔄 Reversals** tab isolates the subset of rating flips that **crossed the neutral line**
+between bullish (Buy/Overweight) and bearish (Sell/Underweight) since the previous run — the
+"flip your position" calls — split into **🟢 Turned bullish** (open/add candidates) and
+**🔴 Turned bearish** (trim/exit candidates). Detection: `rating_score(prev)*rating_score(cur) < 0`
+(both nonzero, opposite sign), so e.g. Underweight→Overweight or Sell→Buy qualify, but
+Hold→Buy (mild upgrade) does not — those stay in the 🔔 Changes tab (where reversals are also
+marked with a 🔄). A purple **🔄 N reversals** badge appears in the header.
+
 ### Decision trends (consistency check)
 For any stock analyzed 2+ times, the engine's rating is scored (Buy +2 … Sell −2) and
 plotted across runs. A change between consecutive runs is a **break** (ring on the chart);

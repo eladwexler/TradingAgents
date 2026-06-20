@@ -19,9 +19,10 @@ The dashboard (`dashboard/index.html`) is the read-out: best-call leaderboards, 
 ```bash
 # ── WEEKLY (full cycle) ─────────────────────────────────────────────
 scripts/update_all.sh --brains-only          # 1. refresh all 5 brains first
-scripts/update_all.sh --analysis-plan         # 2. see which tickers are stale, then…
+/ai-cycle-watch                               # 2. refresh the macro phase (uses fresh brains)
+scripts/update_all.sh --analysis-plan         # 3. see which tickers are stale, then…
 /trading-analysis <TICKER>                    #    …run on demand for each (resumable)
-scripts/update_all.sh --no-brains             # 3. final dashboard + calibration
+scripts/update_all.sh --no-brains             # 4. final dashboard + calibration
 
 # ── DAILY (light) ───────────────────────────────────────────────────
 scripts/update_brains.sh x && python3 scripts/build_dashboard.py   # fresh X sentiment/research
@@ -47,7 +48,17 @@ Report each brain's before→after chunk count.
 
 > Per-brain control if needed: `scripts/update_brains.sh [jensen|leopold|jordi|gavin|x|both]`.
 
-### 2. Re-analyze the tickers (forecasts, on demand — you)
+### 2. Update the macro cycle (LLM)
+```text
+/ai-cycle-watch
+```
+Run right after the brains so it uses the freshest corpora. It writes
+`ai-cycle-reports/<DATE>_cycle.md` — the macro **phase / stance** that `/trading-analysis`
+Stage 0 reads for its macro-adjusted call, so do this **before** the analyses.
+(The `/update-all` skill runs this step automatically; run it by hand only if you're doing
+the staged commands.)
+
+### 3. Re-analyze the tickers (forecasts, on demand — you)
 See what's stale (tracked names with no decision dated today — a **resumable** worklist):
 ```bash
 scripts/update_all.sh --analysis-plan
@@ -62,7 +73,7 @@ Then for each ticker run the full pipeline:
   what's left; finished-today tickers drop off the list.
 - Analyze a **new** name just by running it; it appears as a **🆕 New name** in Changes.
 
-### 3. Final dashboard + calibration (data, scripted)
+### 4. Final dashboard + calibration (data, scripted)
 ```bash
 scripts/update_all.sh --no-brains
 ```
@@ -70,7 +81,7 @@ Rebuilds the dashboard (now reflecting every fresh analysis, with the **🔔 Cha
 inline Research deltas), lists **matured-but-unresolved** forecasts, and prints the
 **Brier/alpha scorecard**.
 
-### 4. Review & resolve
+### 5. Review & resolve
 - Open `dashboard/index.html` → **🔔 Changes** for the week's flips / metric moves / new
   names / X-research shifts; **🔬 Research** for hot trends + most-bullish names.
 - **Resolve matured forecasts** (manual — needs a written reflection):
@@ -103,12 +114,16 @@ You don't need the full cycle daily. Pick what's useful:
 
 ## What `/update-all` does (and doesn't)
 
-| Phase | Command | LLM? |
-|---|---|---|
-| Brains (5 corpora + indexes) | `scripts/update_all.sh --brains-only` | no |
-| Dashboard (incl. Changes/Research) | part of `update_all.sh` | no |
-| Calibration (pending + Brier scorecard) | part of `update_all.sh` | no |
-| **Per-ticker forecasts** | **`/trading-analysis <TICKER>`** (you, on demand) | **yes** |
+The `/update-all` **skill** bundles the brains + macro cycle + dashboard + calibration; the
+`update_all.sh` **script** does only the no-model parts.
+
+| Phase | Command | In `/update-all`? | LLM? |
+|---|---|---|---|
+| Brains (5 corpora + indexes) | `scripts/update_all.sh --brains-only` | ✅ | no |
+| Macro cycle (phase/stance) | `/ai-cycle-watch` | ✅ (skill runs it) | **yes** |
+| Dashboard (incl. Changes/Research) | part of `update_all.sh` | ✅ | no |
+| Calibration (pending + Brier scorecard) | part of `update_all.sh` | ✅ | no |
+| **Per-ticker forecasts** | **`/trading-analysis <TICKER>`** (you, on demand) | ❌ separate | **yes** |
 
 `scripts/update_all.sh` (no flags) = brains + dashboard + calibration in one shot. It
 **cannot** run `/trading-analysis` (no model in a shell script); it just prints an FYI of how
