@@ -434,6 +434,38 @@ def cls_x(v):
     if "mixed" in v: return "b-hold"
     return "b-neu"
 
+
+def x_verdict_score(v):
+    """X Brain verdict → ordinal so we can tell which way the crowd moved."""
+    v = (v or "").lower()
+    if "bullish" in v: return 1
+    if "bearish" in v: return -1
+    return 0  # Mixed / Insufficient chatter — neutral
+
+
+def x_trend_cell(runs):
+    """Inline trend for a ticker's X Brain verdict: latest vs its previous analysis.
+
+    `runs` = that ticker's records (any order). Compares the two most recent runs that
+    actually carry an X verdict. Returns (html, sort_value):
+      ⇄  verdict changed (colored toward/away from bullish) · tooltip shows old→new
+      →  unchanged since the prior run
+      ·  only one X reading on record (no history yet)
+    """
+    xs = [r for r in sorted(runs, key=lambda r: r["date"]) if r.get("x")]
+    if len(xs) < 2:
+        return ('<span class="muted" title="only one X Brain reading on record — '
+                're-run the analysis over time to build a trend">·</span>', 0)
+    cur, prev = xs[-1], xs[-2]
+    if cur["x"] == prev["x"]:
+        return (f'<span class="muted" title="X Brain unchanged since {html.escape(prev["date"])} '
+                f'({html.escape(prev["x"])})">→</span>', 0)
+    d = x_verdict_score(cur["x"]) - x_verdict_score(prev["x"])
+    cls = "b-pos" if d > 0 else "b-neg" if d < 0 else "muted"
+    tip = (f'X Brain crowd shifted: {html.escape(prev["x"])} ({html.escape(prev["date"])}) → '
+           f'{html.escape(cur["x"])} ({html.escape(cur["date"])})')
+    return (f'<span class="{cls}" title="{tip}">⇄</span>', d)
+
 # combined-verdict -> numeric secular tilt (used by the by-domain rollup + priority)
 COMBINED_SCORE = {"CONVICTION ALIGNED": 2, "ALIGNED": 1, "NEUTRAL": 0,
                   "CONTESTED": 0, "EXPOSED": -1, "OFFSIDE": -2, "INSUFFICIENT": 0}
@@ -900,9 +932,11 @@ def build_research(rx, rx_prev=None):
     trends_html = (f'<ol class="xbars">{trows}</ol>' if trows else
                    '<p class="muted">No trend signal in the corpus yet.</p>')
 
-    # most-bullish names — sortable table
+    # most-bullish names — sortable table (with inline Δ vs the previous snapshot)
     def _b(v, c):
         return f'<span class="badge {c}">{html.escape(str(v))}</span>'
+    prev_b = {b["ticker"]: b for b in (rx_prev or {}).get("bullish", [])}
+    pdate = ((rx_prev or {}).get("generated", "") or "")[:10]
     brows = ""
     for r in bullish:
         # clicking the name opens the live X cashtag search — see the actual FinTwit chatter
@@ -910,6 +944,26 @@ def build_research(rx, rx_prev=None):
         xurl = f'https://x.com/search?q=%24{tk}&f=live'
         tkcell = (f'<a href="{xurl}" target="_blank" rel="noopener" '
                   f'title="live X chatter for ${tk}">{tk}</a>')
+        # Δ vs last run: net-sentiment move, lean flips, or NEW since the prior snapshot
+        if not rx_prev:
+            dcell, dval = '<span class="muted" title="no prior snapshot yet — refresh to start the trend">·</span>', 0
+        elif r["ticker"] not in prev_b:
+            dcell, dval = ('<span class="b-pos" title="not on the board in the previous snapshot">NEW</span>',
+                           10 ** 6)
+        else:
+            p = prev_b[r["ticker"]]
+            dn = r["net"] - p.get("net", 0)
+            dval = dn
+            if dn > 0:
+                bits = [f'<span class="b-pos" title="X net sentiment up {dn} vs {pdate}">▲{dn}</span>']
+            elif dn < 0:
+                bits = [f'<span class="b-neg" title="X net sentiment down {-dn} vs {pdate}">▼{-dn}</span>']
+            else:
+                bits = ['<span class="muted" title="no net-sentiment change">→0</span>']
+            if r["lean"] != p.get("lean"):
+                bits.append(f'<span class="muted" title="lean flipped: {html.escape(p.get("lean",""))} → '
+                            f'{html.escape(r["lean"])}">⇄</span>')
+            dcell = " ".join(bits)
         brows += (
             f'<tr>'
             f'<td><b>{tkcell}</b></td>'
@@ -920,6 +974,7 @@ def build_research(rx, rx_prev=None):
             f'<td class="num" data-s="{r["net"]}">{r["net"]:+d}</td>'
             f'<td class="num" data-s="{r["ratio"]}">{r["ratio"]:.2f}</td>'
             f'<td class="muted" data-s="{html.escape(r.get("date",""))}" style="white-space:nowrap">{html.escape(r.get("date",""))}</td>'
+            f'<td class="num" data-s="{dval}">{dcell}</td>'
             f'</tr>')
     bullish_html = (
         '<table id="xbull"><thead><tr>'
@@ -931,6 +986,7 @@ def build_research(rx, rx_prev=None):
         '<th onclick="sortBy(5,this,1)" title="Bull words minus bear words — the signed sentiment balance.">Net</th>'
         '<th onclick="sortBy(6,this,1)" title="Bull words ÷ bear words — how lopsided the chatter is (higher = more one-sidedly bullish).">Bull ratio</th>'
         '<th onclick="sortBy(7,this)" title="Date of the most recent post about this name in the corpus.">Latest</th>'
+        f'<th onclick="sortBy(8,this,1)" title="Trend since the previous X Brain run ({html.escape(pdate) if pdate else "no prior snapshot yet"}): change in net sentiment (▲/▼), a lean flip (⇄), or NEW on the board. Populates once a second snapshot exists.">Δ vs last</th>'
         f'</tr></thead><tbody>{brows}</tbody></table>') if brows else \
         '<p class="muted">No per-name sentiment in the corpus yet.</p>'
 
@@ -1524,6 +1580,7 @@ def main():
         jor = badge(r["jordi"], cls_brain(r["jordi"])) if r["jordi"] else "—"
         gav = badge(r["gavin"], cls_brain(r["gavin"])) if r["gavin"] else "—"
         xb = badge(r["x"], cls_x(r["x"])) if r["x"] else "—"
+        xtrend_html, xtrend_s = x_trend_cell(by_ticker.get(r["ticker"], []))
         comb = badge(r["combined"], cls_combined(r["combined"])) if r["combined"] else "—"
         dom = html.escape(AI_DOMAIN.get(r["ticker"], "—"))
         bkt = bucket_for(r["ticker"])
@@ -1548,6 +1605,7 @@ def main():
             f'<td>{jor}</td>'
             f'<td>{gav}</td>'
             f'<td>{xb}</td>'
+            f'<td class="num" data-s="{xtrend_s}">{xtrend_html}</td>'
             f'<td>{comb}</td>'
             f'</tr>')
 
