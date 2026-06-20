@@ -81,6 +81,11 @@ if [ "$DO_DASH" = 1 ]; then
   if [ -f "$ROOT/scripts/fetch_metrics.py" ]; then
     ( cd "$ROOT" && "$PY" scripts/fetch_metrics.py ) || echo "  [warn] fetch_metrics failed (offline?) — using last cache"
   fi
+  # recompute the conviction tiers (HIGH/MEDIUM/LOW/AVOID + size) from the fresh
+  # metrics + verdicts; writes conviction.json that the dashboard reads.
+  if [ -f "$ROOT/scripts/conviction.py" ]; then
+    ( cd "$ROOT" && "$PY" scripts/conviction.py >/dev/null ) || echo "  [warn] conviction scoring failed"
+  fi
   if [ -f "$ROOT/scripts/build_dashboard.py" ]; then
     ( cd "$ROOT" && "$PY" scripts/build_dashboard.py ) || echo "  [warn] dashboard rebuild failed"
     echo "  -> open $ROOT/dashboard/index.html"

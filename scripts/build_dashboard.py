@@ -46,6 +46,33 @@ def load_x_research(path):
 
 UNDER_PRESSURE = os.path.join(os.path.dirname(MEM), "under_pressure.json")
 METRICS = os.path.join(os.path.dirname(MEM), "metrics.json")
+CONVICTION = os.path.join(os.path.dirname(MEM), "conviction.json")
+
+
+def load_conviction(path):
+    """conviction.py output: {TICKER: {tier, score, size_pct, reasons, vetoes}} or {}."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return {r["ticker"]: r for r in data.get("rows", [])}
+    except Exception:
+        return {}
+
+
+# conviction tier → sort rank (HIGH on top) + badge colour
+TIER_RANK = {"HIGH": 3, "MEDIUM": 2, "LOW": 1, "AVOID": 0}
+TIER_CLS = {"HIGH": "b-pos", "MEDIUM": "v-aligned", "LOW": "muted", "AVOID": "b-neg"}
+
+
+def conviction_cell(cv):
+    """(html, sort_value) for the Conviction column from a conviction.json row."""
+    tier = (cv or {}).get("tier")
+    if not tier:
+        return "—", -1
+    size = cv.get("size_pct", 0)
+    badge_html = (f'<span class="badge {TIER_CLS.get(tier, "muted")}">{tier}</span>'
+                  f' <span class="muted">{size}%</span>')
+    return badge_html, TIER_RANK.get(tier, -1)
 
 
 def load_under_pressure(path):
@@ -1198,6 +1225,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     mem = parse_memory(MEM)
     metrics = load_metrics(METRICS)
+    conv = load_conviction(CONVICTION)
     decisions = {}
     for p in glob.glob(os.path.join(STOCKS, "*", "*_decision.md")):
         d = parse_decision(p)
@@ -1533,6 +1561,13 @@ def main():
             price_part = f'Price at analysis ${r["price_at_n"]:,.2f}. '
         else:
             price_part = ''
+        cv = conv.get(r["ticker"]) or {}
+        cv_cell, cv_s = conviction_cell(cv)
+        cv_tip = ""
+        if cv.get("tier"):
+            why = "; ".join((cv.get("vetoes") or cv.get("reasons") or [])[:3])
+            cv_tip = (f'Conviction (12mo hold): {cv["tier"]} — suggested size {cv["size_pct"]}% '
+                      f'of a full unit{(" · " + why) if why else ""}. ')
         row_tip = html.escape(
             f'{r["ticker"]}{name_part} · {dom_full} · analyzed {r["date"]}. '
             f'{price_part}'
@@ -1540,6 +1575,7 @@ def main():
             f'P(beat benchmark) {pb_disp}{exp_part}. '
             f'Secular fit (4 lenses fused): {r["combined"] or "n/a"}. '
             f'Priority {prio}/100 — {prio_word}. '
+            f'{cv_tip}'
             f'Hover a column header for what each field means.')
         rows_html += (
             f'<tr title="{row_tip}" data-domain="{dom_cell}" data-bucket="{html.escape(bkt)}">'
@@ -1559,6 +1595,7 @@ def main():
             f'<td>{xb}</td>'
             f'<td class="num {ocls}" data-s="{osort}">{outcome}</td>'
             f'<td class="muted" data-s="{bucket_rank(bkt):02d}" style="white-space:nowrap">{html.escape(bkt)}</td>'
+            f'<td data-s="{cv_s}" style="white-space:nowrap">{cv_cell}</td>'
             f'</tr>')
 
     # ---- by-stock rollup: times analyzed + latest secular read ----
