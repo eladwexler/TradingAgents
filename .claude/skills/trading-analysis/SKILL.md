@@ -366,42 +366,33 @@ size smaller and treat it as a trade, not a franchise hold*; a financial **HOLD/
 revisit on a pullback*. When they agree, say so and let conviction compound. Always carry
 the **thin-evidence flag** if either brain was Insufficient.
 
-### Stage 6.8 — Conviction Verdict (actionable 12-month-hold tier — STRICT, score-moving on sizing)
-Translate the verdict into a **conviction tier you can actually buy on for a ≥12-month hold**:
-**HIGH / MEDIUM / LOW / AVOID** + a suggested position size. This is the antidote to the
-calibration problem — a raw "BUY" claims only ~0.55 P(beat SPY) in a universe where ~65% of
-names beat SPY anyway, so the rating alone is **not** high-probability. Conviction is earned by
-*independent axes agreeing*, with a **hard veto** that the narrative cannot override.
+### Stage 6.8 — Decision facts (path to profitability — FACTS, not a score)
+Surface the economics that matter for a ≥12-month hold as **transparent facts, not a
+synthesized score**. (An earlier version produced a 0-100 "conviction" number + HIGH/MEDIUM/
+AVOID tiers from hand-picked weights and hardcoded name lists — false precision over an
+unvalidated heuristic; that was removed.) The one derived read kept is the **path to
+profitability**, because it is a direct, transparent function of real economics:
 
-Grounded in the `eval/` backtest findings: momentum/technicals had **negative** 12-month
-predictive power here (so they get **zero** weight in the hold call — they are entry-timing
-only, Stage 1), dispersion was −90%…+4500% (so avoiding blow-ups dominates picking the top),
-and the AI-cycle risk gauge leads on risk but can't time (so it scales **size**, never in/out).
+- **Profitable** — generates cash (positive FCF) or positive operating margin.
+- **Scaling (credible path)** — burning, *but* healthy gross margin (so losses are about
+  scaling, not a broken model) **and** either fast revenue growth (to grow into the cost base)
+  or the market already pricing positive forward earnings. Every new company burns cash; what
+  matters is the velocity to profit, which these economics proxy. **Not** a casualty.
+- **Burning (no path)** — burning with weak unit economics (thin gross margin) or stalling growth.
 
-Apply the **hard vetoes → AVOID** (no matter how bullish the brains):
-- **Unprofitable cash-burner** (negative profit margin **and** negative/again-absent FCF) — survival risk.
-- **Extreme valuation** the growth doesn't justify (PEG > 3, or — when PEG is unavailable — forward P/E > 70).
-- **Secular thesis offside** (Combined Strategic Verdict EXPOSED or OFFSIDE).
-- **Cycle-watch casualty** (leveraged "neocloud" / SPV-financed data-center operator).
-- **Microcap (< $2B)** cannot carry HIGH/MEDIUM for a 12mo hold — cap at LOW (it's the idiosyncratic tail).
-
-For names that clear the vetoes, **HIGH** requires durable fundamentals (Rule-of-40 strong),
-valuation sanity (PEG reasonable / positive FCF yield), the secular gate passed
-(Combined ALIGNED or CONVICTION ALIGNED), **and** P(beat) ≥ 0.58. Otherwise MEDIUM/LOW.
-
-Don't hand-compute it — run the deterministic scorer and quote its tier/size:
+Report a **`Decision Facts:`** line stating the path-to-profit label **with the numbers behind
+it** (gross & operating margin, FCF yield, revenue growth), the valuation read (from PEG, else
+EV/Sales, else forward P/E — PEG skipped when growth is distorted), the secular fit, and P(beat).
+**No tiers, no invented score, no name lists** — present the facts and let the reader judge.
+Don't hand-compute; run and quote:
 ```
 python3 scripts/conviction.py TICKER
 ```
-Report a **`Conviction Verdict:`** line: the tier, the suggested size (% of a full unit, already
-scaled by the current cycle risk), and the one-line reason or veto. State plainly when conviction
-**diverges from the rating** (e.g. *financial BUY but Conviction AVOID on extreme valuation → do
-not initiate a franchise hold*). Size by the cycle gauge; never let it flip you fully in/out.
 
 ### Stage 7 — Persist the decision
 Save the final decision to a per-ticker file **and** append it to the memory log so the next run can learn from it.
 
-1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with a **`Price at analysis: $<close> (<DATE> close)` line** (the verified spot/close from the Stage 1 `snapshot` — the entry-price reference the dashboard parses and marks-to-market against the live price), then the base proposal, macro-adjusted proposal, the `VERDICT FOR NEW INVESTORS:` line, the ratings, **and the forecast block (expected total return + scenarios + P(beats benchmark) + horizon)** so they parse cleanly, followed by the decision summary, key evidence, the plan, and at the end the **`Jensen Brain Verdict:` line**, the **`Leopold Brain Verdict:` line**, the **`Jordi Brain Verdict:` line**, the **`Gavin Brain Verdict:` line**, the **`X Brain Verdict:` line** (the FinTwit sentiment overlay — separate from the four brains), the **`Combined Strategic Verdict:` line** (with its reconciliation sentence), and the **`Conviction Verdict:` line** (Stage 6.8 — tier + suggested size + reason/veto). Use the exact verified close from `snapshot`; if `snapshot` returned `NO_DATA`, omit the price line rather than estimating.
+1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with a **`Price at analysis: $<close> (<DATE> close)` line** (the verified spot/close from the Stage 1 `snapshot` — the entry-price reference the dashboard parses and marks-to-market against the live price), then the base proposal, macro-adjusted proposal, the `VERDICT FOR NEW INVESTORS:` line, the ratings, **and the forecast block (expected total return + scenarios + P(beats benchmark) + horizon)** so they parse cleanly, followed by the decision summary, key evidence, the plan, and at the end the **`Jensen Brain Verdict:` line**, the **`Leopold Brain Verdict:` line**, the **`Jordi Brain Verdict:` line**, the **`Gavin Brain Verdict:` line**, the **`X Brain Verdict:` line** (the FinTwit sentiment overlay — separate from the four brains), the **`Combined Strategic Verdict:` line** (with its reconciliation sentence), and the **`Decision Facts:` line** (Stage 6.8 — path-to-profit label + the margins/growth/valuation behind it). Use the exact verified close from `snapshot`; if `snapshot` returned `NO_DATA`, omit the price line rather than estimating.
 2. Log it **with the forecast probability and horizon** (so it can be Brier-scored at maturity):
 ```
 mkdir -p analyzed-stocks/TICKER

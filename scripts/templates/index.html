@@ -113,6 +113,7 @@
     <button class="tabbtn active" onclick="showTab('tab-overview',this)">📊 Overview</button>
     <button class="tabbtn" onclick="showTab('tab-domains',this)">🧩 AI-trend domains</button>
     <button class="tabbtn" onclick="showTab('tab-trends',this)">📈 Decision trends</button>
+    <button class="tabbtn" onclick="showTab('tab-conviction',this)">📊 Fundamentals</button>
     <button class="tabbtn" onclick="showTab('tab-verdicts',this)">📋 All verdicts</button>
     <button class="tabbtn" onclick="showTab('tab-financials',this)">📐 Financials</button>
     <button class="tabbtn" onclick="showTab('tab-research',this)">🔬 Research (X)</button>
@@ -200,7 +201,7 @@
       <th onclick="sortBy(1,this)" title="Stock symbol — click the ticker in a row to open its full decision page.">Ticker</th>
       <th onclick="sortBy(2,this,1)" title="Latest price — most recent live close, with the % change since the price at analysis (hover for the entry price &amp; date). Live for open calls.">Price</th>
       <th onclick="sortBy(3,this,1)" title="Actionability score 0–100 = conviction (rating) + P(beat) edge + expected 24mo return + secular tilt. 50 = neutral · ≥60 high-conviction long · ≤40 avoid/short.">Priority</th>
-      <th onclick="sortBy(4,this,1)" title="Conviction for a ≥12-month hold (HIGH/MEDIUM/LOW/AVOID) + suggested position size (% of a full unit, scaled by AI-cycle risk). Earned by independent axes agreeing (fundamentals, valuation, survivor status, basket-relative P) with hard vetoes the narrative can't override (cash-burner, extreme valuation, secular offside, leveraged neocloud, microcap). Click to sort HIGH→AVOID.">Conviction</th>
+      <th onclick="sortBy(4,this,1)" title="Path to profitability — Profitable / Scaling (burning but a credible path: healthy gross margin + growth or priced forward profit) / Burning (no path). A transparent read of the name's economics, not a score. See the Fundamentals tab for the underlying numbers.">Path to profit</th>
       <th onclick="sortBy(5,this)" title="Base call — the Buy/Hold/Sell from the company's own fundamentals (bottom-up).">Base</th>
       <th onclick="sortBy(6,this)" title="Macro call — the same call after adjusting for where we are in the AI-spending cycle (top-down reality check). More cautious than Base = the cycle is the reason.">Macro</th>
       <th onclick="sortBy(7,this,1)" title="Model's probability (0–1) the stock beats its benchmark (US → S&amp;P 500) over the horizon. 0.50 = coin-flip; above ~0.60 is a real edge.">P(beat)</th>
@@ -217,6 +218,11 @@
     <tbody>{{TABLE_ROWS}}</tbody>
   </table>
   </div>
+  </section>
+
+  <section class="tabpanel" id="tab-conviction">
+  <h2>Fundamentals <span class="muted" style="text-transform:none;font-weight:400">· the economics that matter for a ≥12-month hold — path to profitability + margins, growth, valuation &amp; secular fit. Facts, not a score.</span></h2>
+  {{CONVICTION}}
   </section>
 
   <section class="tabpanel" id="tab-financials">

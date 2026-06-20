@@ -50,7 +50,7 @@ CONVICTION = os.path.join(os.path.dirname(MEM), "conviction.json")
 
 
 def load_conviction(path):
-    """conviction.py output: {TICKER: {tier, score, size_pct, reasons, vetoes}} or {}."""
+    """conviction.py facts: {TICKER: {path, gross_margin, fcf_yield, valuation, …}} or {}."""
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
@@ -59,20 +59,82 @@ def load_conviction(path):
         return {}
 
 
-# conviction tier → sort rank (HIGH on top) + badge colour
-TIER_RANK = {"HIGH": 3, "MEDIUM": 2, "LOW": 1, "AVOID": 0}
-TIER_CLS = {"HIGH": "b-pos", "MEDIUM": "v-aligned", "LOW": "muted", "AVOID": "b-neg"}
+# path-to-profit → sort rank (Profitable on top) + colour. A transparent read of the
+# economics — NOT a score or a verdict.
+PATH_RANK = {"Profitable": 3, "Scaling (path)": 2, "Burning (no path)": 1, "—": 0}
+PATH_CLS = {"Profitable": "b-pos", "Scaling (path)": "v-aligned",
+            "Burning (no path)": "b-neg", "—": "muted"}
+VAL_CLS = {"cheap": "b-pos", "fair": "", "rich": "muted", "extreme": "b-neg", "—": "muted"}
 
 
-def conviction_cell(cv):
-    """(html, sort_value) for the Conviction column from a conviction.json row."""
-    tier = (cv or {}).get("tier")
-    if not tier:
+def path_cell(cv):
+    """(html, sort_value) for the path-to-profit column from a facts row."""
+    path = (cv or {}).get("path")
+    if not path:
         return "—", -1
-    size = cv.get("size_pct", 0)
-    badge_html = (f'<span class="badge {TIER_CLS.get(tier, "muted")}">{tier}</span>'
-                  f' <span class="muted">{size}%</span>')
-    return badge_html, TIER_RANK.get(tier, -1)
+    return f'<span class="badge {PATH_CLS.get(path, "muted")}">{path}</span>', PATH_RANK.get(path, 0)
+
+
+def build_conviction_tab(conv, pages):
+    """Full HTML for the 📊 Fundamentals tab — decision facts per name, NOT a score.
+
+    Surfaces the economics that matter for a ≥12-month hold (path to profitability +
+    the underlying margins/growth/valuation/secular fit). No weights, no tiers — you judge.
+    """
+    if not conv:
+        return ('<p class="muted">No data yet — run '
+                '<code>python3 scripts/conviction.py</code>.</p>')
+    rows = sorted(conv.values(),
+                  key=lambda r: (-PATH_RANK.get(r.get("path"), 0), -(r.get("pbeat") or 0)))
+
+    def pct(x):
+        return "—" if x is None else f'{x*100:+.0f}%'
+
+    def numcell(x, txt=None, good_high=True):
+        if x is None:
+            return '<td class="num muted" data-s="-999">—</td>'
+        cls = ("b-pos" if (x > 0) == good_high else "b-neg") if good_high is not None else ""
+        return f'<td class="num {cls}" data-s="{x:.4f}">{txt if txt else pct(x)}</td>'
+
+    body = ""
+    for r in rows:
+        tk = r["ticker"]
+        page = pages.get(tk)
+        tklink = f'<a href="{html.escape(page)}">{tk}</a>' if page else tk
+        pcell, ps = path_cell(r)
+        val = r.get("valuation") or "—"
+        val_html = f'<span class="{VAL_CLS.get(val, "")}" title="{html.escape(r.get("valuation_basis") or "")}">{val}</span>'
+        comb = r.get("combined") or "—"
+        pb = r.get("pbeat")
+        body += (
+            f'<tr><td><b>{tklink}</b></td>'
+            f'<td data-s="{ps}">{pcell}</td>'
+            + numcell(r.get("gross_margin")) + numcell(r.get("operating_margin"))
+            + numcell(r.get("fcf_yield")) + numcell(r.get("rev_growth"))
+            + f'<td data-s="{ {"cheap":0,"fair":1,"rich":2,"extreme":3}.get(val,9) }">{val_html}</td>'
+            + numcell(r.get("implied_upside"))
+            + f'<td>{html.escape(comb)}</td>'
+            + (f'<td class="num" data-s="{pb}">{pb:.2f}</td>' if pb is not None
+               else '<td class="num muted" data-s="-1">—</td>')
+            + f'<td class="muted">{html.escape(AI_DOMAIN.get(tk, "—"))}</td></tr>')
+    return (
+        '<p class="muted">The economics that matter for a ≥12-month hold — '
+        '<b>not a score or a verdict</b>. Path to profitability is a direct read of the '
+        'numbers beside it (profitable / scaling with a credible path / burning with none); '
+        'everything else is the raw fact. Sort any column; read it and judge. Not financial advice.</p>'
+        '<div style="overflow-x:auto"><table id="conv"><thead><tr>'
+        '<th onclick="sortBy(0,this)" title="Ticker — click to open its decision page.">Ticker</th>'
+        '<th onclick="sortBy(1,this,1)" title="Path to profitability — Profitable (generates cash) · Scaling (burning but healthy gross margin + growth or priced forward profit → losses close as it scales) · Burning (no credible path). A transparent read of the columns to the right.">Path to profit</th>'
+        '<th onclick="sortBy(2,this,1)" title="Gross margin — do the unit economics work? High = losses are about scaling, not a broken model.">Gross M</th>'
+        '<th onclick="sortBy(3,this,1)" title="Operating margin — current profitability of the core business (negative = investing/burning).">Op M</th>'
+        '<th onclick="sortBy(4,this,1)" title="Free-cash-flow yield — cash generation vs market cap. Negative = burning cash.">FCF yield</th>'
+        '<th onclick="sortBy(5,this,1)" title="Revenue growth (YoY) — how fast it can grow into its cost base.">Rev growth</th>'
+        '<th onclick="sortBy(6,this,1)" title="Valuation read from the best available multiple (PEG, else EV/Sales, else fwd P/E). Hover a cell for the basis. PEG is skipped when growth is distorted.">Valuation</th>'
+        '<th onclick="sortBy(7,this,1)" title="Implied upside to the mean analyst price target (a weak signal — shown for context).">Analyst upside</th>'
+        '<th onclick="sortBy(8,this)" title="Combined Strategic Verdict — the four secular lenses fused.">Secular</th>'
+        '<th onclick="sortBy(9,this,1)" title="Model P(beat benchmark) from the latest analysis. ~0.55 in a universe where ~65% beat anyway, so treat as a mild lean, not high-probability.">P(beat)</th>'
+        '<th onclick="sortBy(10,this)" title="Where the name sits in the AI build-out.">Domain</th>'
+        f'</tr></thead><tbody>{body}</tbody></table></div>')
 
 
 def load_under_pressure(path):
@@ -1383,8 +1445,13 @@ def main():
         body = "".join(li(r, fmt(r)) for r in items) or f'<li class="muted">{empty}</li>'
         return f'<div class="board"><h3>{title}</h3><ol>{body}</ol></div>'
 
-    longs = sorted([r for r in L if cls_rating(r["rating"]) == "b-buy" and r["pbeat_n"] is not None],
-                   key=lambda r: r["pbeat_n"], reverse=True)[:8]
+    # "Profitable & on-trend" is a transparent FILTER (profitable + secular ALIGNED/CONVICTION),
+    # not a ranking by an invented score — the durable-compounder shortlist. Ordered by P(beat),
+    # an actual model output. Avoids the earlier self-contradiction with the facts table.
+    longs = sorted([r for r in L
+                    if (conv.get(r["ticker"]) or {}).get("path") == "Profitable"
+                    and cls_combined(r["combined"]) in ("v-conviction", "v-aligned")],
+                   key=lambda r: (r["pbeat_n"] if r["pbeat_n"] is not None else 0), reverse=True)[:8]
     byexp = sorted([r for r in L if r["exp24_n"] is not None],
                    key=lambda r: r["exp24_n"], reverse=True)[:8]
     bypb = sorted([r for r in L if r["pbeat_n"] is not None],
@@ -1395,8 +1462,8 @@ def main():
                       key=lambda r: r["alpha_n"], reverse=True)[:8]
 
     dashboards = "".join([
-        board("Highest-conviction longs <span class='muted'>(Buy/OW · P↓)</span>", longs,
-              lambda r: f'<span class="b-pos">P {r["pbeat_n"]:.2f}</span>'),
+        board("Profitable &amp; on-trend <span class='muted'>(durable-compounder filter · by P)</span>", longs,
+              lambda r: f'<span class="b-pos">P {r["pbeat_n"]:.2f}</span>' if r["pbeat_n"] is not None else '<span class="muted">—</span>'),
         board("Highest expected 24mo return", byexp,
               lambda r: f'<span class="b-pos">{r["exp24"]}</span>'),
         board("Highest P(beat benchmark)", bypb, lambda r: f'P {r["pbeat_n"]:.2f}'),
@@ -1562,12 +1629,14 @@ def main():
         else:
             price_part = ''
         cv = conv.get(r["ticker"]) or {}
-        cv_cell, cv_s = conviction_cell(cv)
+        cv_cell, cv_s = path_cell(cv)
         cv_tip = ""
-        if cv.get("tier"):
-            why = "; ".join((cv.get("vetoes") or cv.get("reasons") or [])[:3])
-            cv_tip = (f'Conviction (12mo hold): {cv["tier"]} — suggested size {cv["size_pct"]}% '
-                      f'of a full unit{(" · " + why) if why else ""}. ')
+        if cv.get("path"):
+            def _p(x):
+                return "—" if x is None else f"{x*100:+.0f}%"
+            cv_tip = (f'Path to profit: {cv["path"]} (gross margin {_p(cv.get("gross_margin"))}, '
+                      f'op margin {_p(cv.get("operating_margin"))}, FCF yield {_p(cv.get("fcf_yield"))}, '
+                      f'rev growth {_p(cv.get("rev_growth"))}; valuation {cv.get("valuation") or "—"}). ')
         row_tip = html.escape(
             f'{r["ticker"]}{name_part} · {dom_full} · analyzed {r["date"]}. '
             f'{price_part}'
@@ -1713,9 +1782,13 @@ def main():
     changes_tab = f'🔔 Changes{f" ({changes_n + up_n})" if (changes_n + up_n) else ""}'
     reversals_tab = f'🔄 Reversals{f" ({reversals_n})" if reversals_n else ""}'
 
+    conviction_html = build_conviction_tab(
+        conv, {r["ticker"]: r.get("page") for r in latest.values()})
+
     itpl = open(os.path.join(TPL, "index.html"), encoding="utf-8").read()
     idx = itpl
     for k, v in {"{{GENERATED}}": NOW, "{{COUNT}}": str(len(recs)),
+                 "{{CONVICTION}}": conviction_html,
                  "{{TICKERS}}": str(len(latest)), "{{SUMMARY_CARDS}}": cards,
                  "{{DASHBOARDS}}": dashboards, "{{BY_STOCK}}": stk_rows,
                  "{{BY_DOMAIN}}": dom_rows, "{{DOMAIN_OPTIONS}}": domain_options,
