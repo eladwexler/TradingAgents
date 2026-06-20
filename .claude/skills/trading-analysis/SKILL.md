@@ -1,6 +1,6 @@
 ---
 name: trading-analysis
-description: Run a TradingAgents-style multi-agent stock/asset analysis without any LLM API key, producing a calibrated 12–36 month return forecast — Claude plays every agent role (analysts, bull/bear researchers, trader, risk debate, portfolio manager) while reusing the project's own data-fetching scripts. Outputs bear/base/bull total-return scenarios, expected CAGR, and P(beats benchmark), then logs the forecast for later Brier-scoring. Concludes with a qualitative "Jensen Brain Verdict" — would Jensen Huang / NVIDIA strategically back the company — sourced from an index of 100+ Jensen Huang interviews. Use when the user asks to analyze a ticker, get a BUY/HOLD/SELL view or a multi-year price/return prediction, run "the trading agents", or do multi-agent financial analysis on a symbol and date.
+description: Run a TradingAgents-style multi-agent stock/asset analysis without any LLM API key, producing a calibrated 12–36 month return forecast — Claude plays every agent role (analysts, bull/bear researchers, trader, risk debate, portfolio manager) while reusing the project's own data-fetching scripts. Outputs bear/base/bull total-return scenarios, expected CAGR, and P(beats benchmark), then logs the forecast for later Brier-scoring. Concludes with four qualitative secular lenses — a "Jensen Brain Verdict" (would Jensen Huang / NVIDIA strategically back the company, from an index of 100+ Jensen interviews), a "Leopold Brain Verdict" (does the company fit Leopold Aschenbrenner's Situational Awareness AGI-build-out thesis, from his essay + interviews), a "Jordi Brain Verdict" (does the company sit with or against Jordi Visser's macro / AI-capex / creative-destruction thesis, from his @JordiVisserLabs channel), and a "Gavin Brain Verdict" (would Gavin Baker back it as an AI winner — is AI sustaining or disruptive to its moat — strict, from his long-form guest appearances) — then fuses all four into one strict "Combined Strategic Verdict". Use when the user asks to analyze a ticker, get a BUY/HOLD/SELL view or a multi-year price/return prediction, run "the trading agents", or do multi-agent financial analysis on a symbol and date.
 ---
 
 # Trading Analysis — 12–36 month prediction tool (key-free, Claude-as-agents)
@@ -176,10 +176,162 @@ praising/using* a company from *NVIDIA backing* it. Map to:
 - **Why:** 2–4 bullets tying the company to specific Jensen theses + its NVIDIA relationship (customer / partner / supplier / competitor).
 - **In his words:** 1–3 short quoted snippets, each cited `(<date> — <video title>, <url>)`. Quote only retrieved text; never invent quotes. If `top_direct_score` is low, say the corpus is thin and lean on sector fit.
 
+### Stage 6.6 — Leopold Brain Verdict (Situational Awareness thesis-fit lens)
+After the Jensen verdict, add a **Leopold Brain Verdict**: does the company sit **with or
+against Leopold Aschenbrenner's *Situational Awareness* thesis** — a beneficiary/enabler
+of the AGI build-out (a thesis *tailwind*) or orthogonal / likely disrupted (a *headwind*),
+judged only from what Leopold has actually written or said? This is the second
+**qualitative** secular lens — where Jensen reads NVIDIA-platform fit, Leopold reads
+fit with the compute-scaling / trillion-dollar-cluster / **power-as-binding-constraint** /
+chips-&-fabs / lock-down-the-labs / US-China-race build-out. Like Jensen's, it is
+**surfaced, not score-moving**: it does **not** alter the Brier-scored forecast, the
+Expected-Return Model, or the BASE/MACRO ratings.
+
+Run the bridge to the Leopold brain (a BM25 index over his *Situational Awareness* essay
++ long-form interviews in the companion `leopold-brain` project). From the repo root, pass
+good alias terms — company, CEO, flagship products/tickers — plus the theses it touches:
+
+```
+python3 .claude/skills/trading-analysis/scripts/leopold_brain.py \
+    "<company> <CEO> <products/aliases>" \
+    --thesis "<the Situational Awareness theses it touches: compute scaling / trillion-dollar cluster / power & electricity / chips & fabs & HBM / AGI labs / security / US-China race>" \
+    --k 5
+```
+(Set `LEOPOLD_HOME` if the leopold-brain project lives elsewhere; default `/home/ewexler/projects/leopold-brain`.
+ If the bridge reports the index is missing, note Leopold Brain as unavailable and skip — do not fabricate.)
+
+The bridge returns four passage groups (direct mentions, thesis fit, beneficiary/bottleneck
+lens, skepticism/what-breaks-the-trade lens) and a **coverage signal**. Leopold is an
+essayist/investor, not a company — there is **no announcements lane**, and a name he never
+mentions is normal; judge by how squarely it sits in the build-out, not by whether he named
+it. From them, decide one verdict — names squarely in **compute / power / grid / chips /
+fabs / leading labs** lean *Thesis tailwind*; names the build-out **commoditizes or AGI
+disrupts** (labor-arbitrage services, moats AGI erodes) or that are simply orthogonal lean
+*Thesis headwind*. Map to:
+
+- **Leopold Brain Verdict:** Thesis tailwind / Possible / Thesis headwind / Insufficient evidence — with confidence (low/med/high).
+- **Why:** 2–4 bullets tying the company to specific Situational Awareness theses + where it sits in the build-out (enabler / beneficiary / commoditized / disrupted / orthogonal).
+- **In his words:** 1–3 short quoted snippets, each cited `(<date> — <title>, <url>)`. Quote only retrieved text; never invent quotes. If `leopold_direct_score` is low, say the corpus does not name it and lean on thesis fit.
+
+### Stage 6.65 — Jordi Brain Verdict (macro / AI thesis-fit lens)
+After the Leopold verdict, add a **Jordi Brain Verdict**: does the company sit **with or
+against Jordi Visser's macro / AI thesis** — a *beneficiary* of the AI capex super-cycle,
+compute scarcity, the deflationary AI productivity boom ("the new QE is AI and crypto"),
+bitcoin-as-macro-trade and physical-AI / robotics build-out (a thesis *tailwind*), or on
+the wrong side of the **creative destruction** he warns about — the "SaaS-pocalypse",
+widening **ROIC gaps**, over-levered hyperscalers, labor disruption (a thesis *headwind*)?
+Judged only from what Jordi has actually said. This is the third **qualitative** secular
+lens — where Jensen reads NVIDIA-platform fit and Leopold reads the AGI-build-out thesis,
+Jordi reads the **markets / macro-cycle** fit. Like the others it is **surfaced, not
+score-moving**: it does **not** alter the Brier-scored forecast, the Expected-Return Model,
+or the BASE/MACRO ratings.
+
+Run the bridge to the Jordi brain (a BM25 index over every @JordiVisserLabs video + a news
+lane). From the repo root, pass good alias terms — company, CEO, ticker — plus the Jordi
+theses it touches:
+
+```
+python3 .claude/skills/trading-analysis/scripts/jordi_brain.py \
+    "<company> <CEO> <ticker/aliases>" \
+    --thesis "<the Jordi theses it touches: AI capex cycle / compute scarcity / deflation & productivity / bitcoin / physical AI / robotics / SaaS disruption / ROIC gap / agents>" \
+    --k 5
+```
+(Set `JORDI_HOME` if the jordi-brain project lives elsewhere; default `/home/ewexler/projects/jordi-brain`.
+ If the bridge reports the index is missing, note Jordi Brain as unavailable and skip — do not fabricate.)
+
+The bridge returns five passage groups (direct mentions split JORDI-SAID vs NEWS, thesis
+fit, a tailwind lens, a skepticism/creative-destruction lens) and a **coverage signal**.
+Jordi is a macro investor/commentator, not a company — a name he never names is normal;
+judge by how the company sits in his framework. From them, decide one verdict — names
+squarely in **AI-capex beneficiaries / compute & power scarcity / physical-AI / bitcoin-macro**
+or genuine **productivity / disruption winners** lean *Constructive*; names his thesis says
+get **commoditized or disrupted** (legacy seat-priced SaaS, widening-ROIC-gap businesses,
+over-levered hyperscalers, labor-arbitrage services) lean *Cautious*. Map to:
+
+- **Jordi Brain Verdict:** Constructive / Possible / Cautious / Insufficient evidence — with confidence (low/med/high).
+- **Why:** 2–4 bullets tying the company to specific Jordi theses + where it sits in his framework (capex beneficiary / scarcity winner / productivity winner / commoditized / disrupted / orthogonal).
+- **In his words:** 1–3 short quoted snippets, each cited `(<date> — <video title>, <url>)`. Quote only retrieved text; never invent quotes. If `jordi_direct_score` is low, say the corpus does not name it and lean on thesis fit.
+
+### Stage 6.66 — Gavin Brain Verdict (AI-winner conviction lens — STRICT)
+After the Jordi verdict, add a **Gavin Brain Verdict**: would **Gavin Baker (Atreides
+Management) back this company as an AI winner**, judged through his central question —
+*"is AI **sustaining** (strengthens the incumbent's moat: proprietary data, distribution,
+scale, compute access) or **disruptive** (erodes it)?"* This is the fourth **qualitative**
+secular lens — where Jensen reads NVIDIA-platform fit, Leopold the AGI-build-out thesis,
+and Jordi the macro/markets cycle, Gavin reads it as a **concentrated AI stock-picker**.
+Like the others it is **surfaced, not score-moving**: it does **not** alter the Brier-scored
+forecast, the Expected-Return Model, or the BASE/MACRO ratings.
+
+**Be STRICT.** Gavin is opinionated and concentrated — reserve the positive verdict for
+**strong, direct, repeated** evidence (a known holding / emphatic endorsement of the
+*specific* name). Praise of a *theme* is **not** backing a *stock*. Default to Possible or
+Insufficient when the corpus is thin; never inflate a tangential mention into a pick.
+
+Run the bridge to the Gavin brain (a BM25 index over his long-form guest appearances —
+BG2, Invest Like the Best, Aleph, a16z, Sohn, TBPN… — plus a news lane). From the repo
+root, pass alias terms — company, CEO, ticker — plus the Gavin theses it touches:
+
+```
+python3 .claude/skills/trading-analysis/scripts/gavin_brain.py \
+    "<company> <CEO> <ticker/aliases>" \
+    --thesis "<the Gavin theses it touches: compute / accelerators / inference vs training / custom silicon / proprietary data / distribution / power / sustaining-vs-disruptive>" \
+    --k 5
+```
+(Set `GAVIN_HOME` if the gavin-brain project lives elsewhere; default `/home/ewexler/projects/gavin-brain`.
+ If the bridge reports the index is missing, note Gavin Brain as unavailable and skip — do not fabricate.)
+
+The bridge returns five passage groups (direct mentions split GAVIN-SAID vs NEWS, thesis
+fit, a sustaining-vs-disruptive lens, a skepticism lens) and a **coverage signal**. Decide
+one verdict under the strict bar — a clear compute/data/distribution **moat winner** Gavin
+directly and repeatedly backs leans *Conviction pick*; a business he frames as **disrupted
+or commoditized** by AI leans *Cautious*; a framework-fit-but-no-direct-call leans
+*Possible*; absent/thin leans *Insufficient*. Map to:
+
+- **Gavin Brain Verdict:** Conviction pick / Possible / Cautious / Insufficient evidence — with confidence (low/med/high).
+- **Why:** 2–4 bullets on the sustaining-vs-disruptive read + whether it's a compute/data/distribution moat winner or a disruption casualty, and whether he backs the *specific name* vs the theme.
+- **In his words:** 1–3 short quoted snippets, each cited `(<date> — <venue/title>, <url>)`. Quote only retrieved text; never invent quotes. **If `gavin_direct_score` is low, do NOT issue a Conviction pick** — lean Possible/Insufficient and say the corpus is thin.
+
+### Stage 6.7 — Combined Strategic Verdict (strict)
+Finally, fuse the four secular lenses into **one strict Combined Strategic Verdict** — the
+single answer to *"is this name on the right side of the AI build-out?"* All four brains
+already answer that (Jensen from NVIDIA's platform, Leopold from the Situational Awareness
+thesis, Jordi from the macro / AI-capex / creative-destruction cycle, Gavin from the
+AI-stock-picker sustaining-vs-disruptive lens); this collapses them deterministically so
+the call is reproducible, not vibes.
+
+Score each brain **+1 / 0 / −1**:
+- **Jensen:** *Likely back* = +1, *Possible* = 0, *Unlikely back* = −1.
+- **Leopold:** *Thesis tailwind* = +1, *Possible* = 0, *Thesis headwind* = −1.
+- **Jordi:** *Constructive* = +1, *Possible* = 0, *Cautious* = −1.
+- **Gavin:** *Conviction pick* = +1, *Possible* = 0, *Cautious* = −1.
+
+Treat any *Insufficient evidence* as **0 but flagged thin**. Then map strictly — a genuine
+**sign split** (at least one +1 *and* at least one −1) is always **CONTESTED**, regardless
+of the sum; otherwise go by the sum of the four (range −4..+4):
+
+| Condition | Combined Strategic Verdict |
+|---|---|
+| any +1 **and** any −1 present (lenses disagree) | **CONTESTED** — name the split |
+| no negatives, sum **+3 or +4** | **CONVICTION ALIGNED** — squarely on the right side of all lenses |
+| no negatives, sum **+1 or +2** | **ALIGNED** |
+| sum **0**, no disagreement (all neutral/thin) | **NEUTRAL** (or **INSUFFICIENT** if all four were thin) |
+| no positives, sum **−1 or −2** | **EXPOSED** |
+| no positives, sum **−3 or −4** | **OFFSIDE** — on the wrong side of all lenses |
+
+Then **reconcile with the financial call** (the MACRO-ADJUSTED proposal from Stage 6) in
+one or two strict sentences. The Combined Strategic Verdict is still **non-score-moving**
+— it does not change the forecast or the BASE/MACRO ratings — but it is the master secular
+overlay, so divergence must be stated plainly: e.g. a financial **BUY** under a
+**CONTESTED/EXPOSED/OFFSIDE** strategic verdict means *the secular tailwind is not assured —
+size smaller and treat it as a trade, not a franchise hold*; a financial **HOLD/SELL** under
+**CONVICTION ALIGNED** means *the franchise is on-side but the entry/price/cycle isn't —
+revisit on a pullback*. When they agree, say so and let conviction compound. Always carry
+the **thin-evidence flag** if either brain was Insufficient.
+
 ### Stage 7 — Persist the decision
 Save the final decision to a per-ticker file **and** append it to the memory log so the next run can learn from it.
 
-1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with the base proposal, macro-adjusted proposal, the `VERDICT FOR NEW INVESTORS:` line, the ratings, **and the forecast block (expected total return + scenarios + P(beats benchmark) + horizon)** so they parse cleanly, followed by the decision summary, key evidence, the plan, and the **`Jensen Brain Verdict:` line** at the end.
+1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with the base proposal, macro-adjusted proposal, the `VERDICT FOR NEW INVESTORS:` line, the ratings, **and the forecast block (expected total return + scenarios + P(beats benchmark) + horizon)** so they parse cleanly, followed by the decision summary, key evidence, the plan, and at the end the **`Jensen Brain Verdict:` line**, the **`Leopold Brain Verdict:` line**, the **`Jordi Brain Verdict:` line**, the **`Gavin Brain Verdict:` line**, and the **`Combined Strategic Verdict:` line** (with its reconciliation sentence).
 2. Log it **with the forecast probability and horizon** (so it can be Brier-scored at maturity):
 ```
 mkdir -p analyzed-stocks/TICKER
@@ -188,6 +340,11 @@ python3 .claude/skills/trading-analysis/scripts/ta_memory.py log TICKER DATE \
     --file analyzed-stocks/TICKER/DATE_decision.md \
     --prob 0.66 --horizon-months 24
 ```
+3. Refresh the HTML dashboard so the new verdict is viewable and the best-call
+   leaderboards update: `python3 scripts/build_dashboard.py` (regenerates
+   `dashboard/index.html` + a per-decision page from `scripts/templates/`; pure stdlib,
+   reads the memory log + `analyzed-stocks/`). See `scripts/DASHBOARD.md`.
+
 The entry is stored `pending` with its `P=` and `H=` tokens; a later run resolves it (`resolve … --horizon-months 24`) with the realised raw/alpha/CAGR **once the horizon matures**, and `score` then folds it into the calibration stats. The `analyzed-stocks/` tree is the human-readable archive; the memory log is the machine-readable feedback loop that tells you whether the predictions are any good — keep both.
 
 ## Output format
@@ -203,7 +360,12 @@ Present, in this order:
 
    …with the scenario probabilities and the one dominant swing factor noted beneath.
 2. **Decision**: both `FINAL TRANSACTION PROPOSAL (BASE): **BUY/HOLD/SELL**` and `FINAL TRANSACTION PROPOSAL (MACRO-ADJUSTED): **BUY/HOLD/SELL**` + their five-tier ratings (with a short plain-words gloss, e.g. *Overweight — "own more than average, but sized small for the risk"*) + **VERDICT FOR NEW INVESTORS** combining both views into a 2–3 sentence rationale anchored on the horizon and the survivable bear-case drawdown. **For a new buyer, fold the Shay Boloor Verdict in here as entry-timing only** — i.e. whether to start the position now or wait for a better entry — without letting it move the BASE/MACRO call. If the extension warning fired, explicitly note that the entry is stretched and that new-money sizing should be smaller.
-   Then, **at the very end of the verdict**, append the **Jensen Brain Verdict** (Stage 6.5): `Jensen Brain Verdict: **Likely back / Possible / Unlikely back / Insufficient evidence**` + confidence, 2–4 why-bullets, and 1–3 cited quotes. Present it as a qualitative NVIDIA-strategic-fit lens that does **not** move the BASE/MACRO call or the forecast numbers.
+   Then, **at the very end of the verdict**, append the three secular lenses and their fusion, in this order, none of which move the BASE/MACRO call or the forecast numbers:
+   - **Jensen Brain Verdict** (Stage 6.5): `Jensen Brain Verdict: **Likely back / Possible / Unlikely back / Insufficient evidence**` + confidence, 2–4 why-bullets, and 1–3 cited quotes. A qualitative NVIDIA-strategic-fit lens.
+   - **Leopold Brain Verdict** (Stage 6.6): `Leopold Brain Verdict: **Thesis tailwind / Possible / Thesis headwind / Insufficient evidence**` + confidence, 2–4 why-bullets, and 1–3 cited quotes. A qualitative Situational-Awareness-thesis-fit lens.
+   - **Jordi Brain Verdict** (Stage 6.65): `Jordi Brain Verdict: **Constructive / Possible / Cautious / Insufficient evidence**` + confidence, 2–4 why-bullets, and 1–3 cited quotes. A qualitative macro / AI-capex / creative-destruction thesis-fit lens.
+   - **Gavin Brain Verdict** (Stage 6.66): `Gavin Brain Verdict: **Conviction pick / Possible / Cautious / Insufficient evidence**` + confidence, 2–4 why-bullets, and 1–3 cited quotes. A strict AI-stock-picker (sustaining-vs-disruptive) lens.
+   - **Combined Strategic Verdict** (Stage 6.7): `Combined Strategic Verdict: **CONVICTION ALIGNED / ALIGNED / NEUTRAL / CONTESTED / EXPOSED / OFFSIDE / INSUFFICIENT**` derived strictly from the four brains' scores (sign-split ⇒ CONTESTED), followed by the one-to-two-sentence reconciliation with the MACRO-ADJUSTED financial call (and the thin-evidence flag if any brain was Insufficient).
 3. Collapsible/clearly-headed sections for each stage (4 analyst reports incl. the Expected-Return Model → research debate + plan → trader proposal → risk debate → PM decision).
 4. A one-line **data caveat** noting any source that returned no data / fell back, plus the reminder that a multi-year point forecast is uncertain, and the standard not-financial-advice disclaimer.
 5. **Appendix — Shay Boloor Verdict (timing reference).** Reproduce the snapshot's verdict (🟢 BULLISH / 🟡 HOLD / 🔴 BEARISH), the levels table, and any qualifier warnings (slope, volume, extension). This is the at-a-glance momentum/structure read for **timing a new entry** and an informational check for **someone already holding** — it does not feed the multi-year forecast or justify trimming an existing position.

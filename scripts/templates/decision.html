@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{TICKER}} — {{DATE}} · Trading-Analysis Verdict</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <p class="back"><a href="index.html">← all verdicts &amp; dashboards</a></p>
+  <header class="top">
+    <div>
+      <h1>{{TICKER}} <span class="muted">· {{NAME}}</span></h1>
+      <div class="sub">Trading-analysis verdict · analysis date {{DATE}} · horizon {{HORIZON}}</div>
+      <div class="sub" style="margin-top:6px">AI build-out domain: <b>{{DOMAIN}}</b></div>
+    </div>
+    <div style="text-align:right">
+      <div><span class="badge {{BASE_CLS}}">BASE {{BASE_ACTION}}</span> <span class="badge {{MACRO_CLS}}">MACRO {{MACRO_ACTION}}</span></div>
+      <div class="sub" style="margin-top:6px">{{STATUS}}</div>
+    </div>
+  </header>
+
+  <div class="verdict-grid">
+    <div class="vbox"><div class="k">Base rating</div><div><span class="badge {{BASE_CLS}}">{{BASE_RATING}}</span></div></div>
+    <div class="vbox"><div class="k">Macro-adjusted</div><div><span class="badge {{MACRO_CLS}}">{{MACRO_RATING}}</span></div></div>
+    <div class="vbox"><div class="k">P(beat benchmark)</div><div style="font-size:22px;font-weight:700">{{PBEAT}}</div></div>
+    <div class="vbox"><div class="k">Expected 24mo</div><div style="font-size:22px;font-weight:700" class="{{EXP_CLS}}">{{EXP24}}</div></div>
+  </div>
+  <div class="verdict-grid">
+    <div class="vbox"><div class="k">Jensen Brain</div><div><span class="badge {{JENSEN_CLS}}">{{JENSEN}}</span></div></div>
+    <div class="vbox"><div class="k">Leopold Brain</div><div><span class="badge {{LEOPOLD_CLS}}">{{LEOPOLD}}</span></div></div>
+    <div class="vbox"><div class="k">Jordi Brain</div><div><span class="badge {{JORDI_CLS}}">{{JORDI}}</span></div></div>
+    <div class="vbox"><div class="k">Gavin Brain</div><div><span class="badge {{GAVIN_CLS}}">{{GAVIN}}</span></div></div>
+    <div class="vbox"><div class="k">Combined strategic</div><div><span class="badge {{COMBINED_CLS}}">{{COMBINED}}</span></div></div>
+  </div>
+
+  <div class="callout"><div class="k">Verdict for new investors</div>{{VERDICT_NEW}}</div>
+
+  <h2>Forecast</h2>
+  {{FORECAST_TABLE}}
+
+  <h2>Decision trend <span class="muted" style="text-transform:none;font-weight:400">· has the engine changed its mind?</span></h2>
+  {{TREND}}
+
+  <div class="body">{{BODY}}</div>
+
+  <p class="disclaimer">Research scaffold only — not financial, investment, or trading advice.
+  Rendered from <code>{{SRCPATH}}</code> · page generated {{GENERATED}}.</p>
+</div>
+</body>
+</html>
