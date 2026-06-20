@@ -90,11 +90,13 @@ def _num(x, d=3) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=os.path.join(HERE, "config.yaml"))
+    ap.add_argument("--start", help="override window.start (as-of / entry date)")
+    ap.add_argument("--end", help="override window.end (exit date)")
     args = ap.parse_args()
     cfg = _load_config(args.config)
 
-    start = cfg["window"]["start"]
-    end = cfg["window"]["end"]
+    start = args.start or cfg["window"]["start"]
+    end = args.end or cfg["window"]["end"]
     bench = cfg["benchmark_ticker"]
     cache = os.path.join(REPO_ROOT, cfg["cache_dir"])
     universe = load_universe(REPO_ROOT, cfg["universe"].get("exclude", []))
@@ -211,16 +213,20 @@ def main() -> int:
         "per_name_return": dict(sorted(name_rets.items(), key=lambda kv: -kv[1])),
     }
 
-    os.makedirs(os.path.join(HERE, "results"), exist_ok=True)
-    jpath = os.path.join(HERE, "results", "scorecard.json")
-    with open(jpath, "w") as f:
-        json.dump(result, f, indent=2)
-    mpath = os.path.join(HERE, "results", "scorecard.md")
-    with open(mpath, "w") as f:
-        f.write(_render_md(result))
+    rdir = os.path.join(HERE, "results")
+    os.makedirs(rdir, exist_ok=True)
+    tag = f"{start}_to_{end}"
+    md = _render_md(result)
+    # window-specific (kept side by side) + a generic "latest" copy
+    for jp in (os.path.join(rdir, f"scorecard_{tag}.json"), os.path.join(rdir, "scorecard.json")):
+        with open(jp, "w") as f:
+            json.dump(result, f, indent=2)
+    for mp in (os.path.join(rdir, f"scorecard_{tag}.md"), os.path.join(rdir, "scorecard.md")):
+        with open(mp, "w") as f:
+            f.write(md)
 
-    print(f"\nWrote {jpath}\nWrote {mpath}\n")
-    print(_render_md(result))
+    print(f"\nWrote results/scorecard_{tag}.{{md,json}} (+ scorecard.{{md,json}} latest)\n")
+    print(md)
     return 0
 
 
