@@ -224,3 +224,6 @@ reports/
 
 # generated trading-analysis verdict dashboard (rebuild with scripts/build_dashboard.py)
 /dashboard/
+
+# eval/ benchmark local price cache (regenerated on demand)
+eval/.price_cache/

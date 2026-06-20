@@ -1,0 +1,45 @@
+{
+  "generated": "2026-06-20 21:03",
+  "history": {
+    "start": "2019-11-29",
+    "end": "2026-06-18",
+    "names": 60,
+    "canaries": [
+      "extension",
+      "breadth_risk",
+      "momentum_heat",
+      "rates",
+      "credit_stress"
+    ]
+  },
+  "predictive_ic": {
+    "risk_vs_fwd63": -0.49644532705735767,
+    "risk_vs_fwd126": -0.487602930812472,
+    "note": "negative = high risk preceded low forward return (good)"
+  },
+  "regime_conditional": {
+    "red_n": 397,
+    "red_fwd63_mean": -0.013244440570871936,
+    "red_fwd63_hit_negative": 0.48866498740554154,
+    "green_n": 610,
+    "green_fwd63_mean": 0.22038072035594714,
+    "all_fwd63_mean": 0.12171767389570089,
+    "all_fwd63_hit_negative": 0.2765804597701149
+  },
+  "timing_strategy": {
+    "risk_managed": {
+      "cagr": 0.38791197834771896,
+      "vol": 0.2697170917660635,
+      "sharpe": 1.3503671573740657,
+      "max_drawdown": -0.36020053366701377,
+      "pct_time_invested": 0.5584795321637427
+    },
+    "buy_and_hold": {
+      "cagr": 0.6424114008352353,
+      "vol": 0.36783722695568144,
+      "sharpe": 1.5345521697816917,
+      "max_drawdown": -0.4583019685237175,
+      "pct_time_invested": 0.9619883040935673
+    }
+  }
+}
