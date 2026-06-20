@@ -16,6 +16,10 @@
   .domcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin:4px 0 8px}
   .domcard{border:1px solid #30363d;border-radius:10px;padding:12px 14px;background:#0d1117}
   .domcard.hide{display:none}
+  .bucketsec{margin:0 0 18px}
+  .bucketsec.hide{display:none}
+  .buckethead{margin:14px 0 6px;font-size:16px;border-left:3px solid #1f6feb;padding-left:10px}
+  .buckethead .muted{text-transform:none;font-weight:400;font-size:12px}
   .domcard-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:14px}
   .domcard-head b{font-size:14px}
   .domcard-meta{margin:4px 0 2px;font-size:11px}
@@ -30,6 +34,13 @@
   .tabbtn.active{background:#0d1117;border-color:#30363d;color:#fff}
   .tabpanel{display:none}
   .tabpanel.active{display:block}
+  .xbars{list-style:none;margin:4px 0 18px;padding:0;display:flex;flex-direction:column;gap:6px}
+  .xbars li{display:flex;align-items:center;gap:10px;font-size:13px}
+  .xbars .bar{height:12px;border-radius:6px;background:linear-gradient(90deg,#1f6feb,#58a6ff);min-width:4px}
+  .chgbadge{display:inline-block;margin-left:8px;background:#1f6feb;color:#fff;border-radius:12px;padding:1px 10px;font-weight:600}
+  ul.chg{list-style:none;margin:2px 0 18px;padding:0;display:flex;flex-direction:column;gap:6px}
+  ul.chg li{font-size:13px;line-height:1.5;border-left:2px solid #30363d;padding:2px 0 2px 10px}
+  ul.chg .cf{display:inline-block;min-width:96px;color:#8b949e;font-size:11px;text-transform:uppercase;letter-spacing:.03em}
 </style>
 </head>
 <body>
@@ -39,7 +50,7 @@
       <h1>Trading-Analysis Verdicts</h1>
       <div class="sub">Every <code>/trading-analysis</code> decision, with best-call dashboards · generated {{GENERATED}}</div>
     </div>
-    <div class="sub">{{COUNT}} verdicts · {{TICKERS}} tickers</div>
+    <div class="sub">{{COUNT}} verdicts · {{TICKERS}} tickers {{CHANGES_BADGE}}</div>
   </header>
 
   <details class="legend">
@@ -66,6 +77,7 @@
         <dt>Leopold Brain</dt><dd>Does it fit Leopold Aschenbrenner's AGI-build-out thesis (compute, power/grid, chips)? <b>Thesis tailwind</b> = a beneficiary/enabler · <b>Possible</b> = partial fit · <b>Thesis headwind</b> = the build-out commoditizes or AGI disrupts it · <b>Insufficient</b> = too thin.</dd>
         <dt>Jordi Brain</dt><dd>Does it sit with <b>Jordi Visser's</b> macro / AI-capex thesis? <b>Constructive</b> = an AI-capex / compute-scarcity / power / bitcoin / physical-AI beneficiary (or a productivity winner like Palantir) · <b>Possible</b> = mixed · <b>Cautious</b> = on the wrong side of his creative destruction (legacy SaaS, ROIC-gap neoclouds, labor disruption) · <b>Insufficient</b> = outside his framework.</dd>
         <dt>Gavin Brain</dt><dd>Would <b>Gavin Baker</b> (Atreides) back it as an AI winner — is AI <b>sustaining</b> (strengthens the moat: data, distribution, scale, compute) or <b>disruptive</b> (erodes it)? <b>Conviction pick</b> = strong, direct, repeated backing (STRICT bar) · <b>Possible</b> = framework fit, no direct call · <b>Cautious</b> = AI disrupts/commoditizes it · <b>Insufficient</b> = he doesn't cover it.</dd>
+        <dt>X Brain</dt><dd>What <b>X (Twitter) FinTwit/AI</b> is saying — crowd sentiment + trend buzz (keyless corpus). <b>Bullish buzz</b> / <b>Mixed</b> / <b>Bearish</b> / <b>Insufficient chatter</b>. A <i>sentiment overlay</i>, the latest &amp; noisiest signal — <b>separate from the four secular brains and NOT part of the Combined verdict</b>. See the <b>Research</b> tab for aggregate trends + the most-bullish names.</dd>
         <dt>Combined</dt><dd>The four lenses fused (sum −4..+4; any sign-split → CONTESTED): <b>CONVICTION ALIGNED</b> (all positive) → <b>ALIGNED</b> → <b>NEUTRAL</b> → <b>CONTESTED</b> (they disagree) → <b>EXPOSED</b> → <b>OFFSIDE</b> (all negative). It flags the secular tailwind; it does <b>not</b> change the Buy/Hold/Sell call.</dd>
       </dl>
     </div>
@@ -100,6 +112,8 @@
     <button class="tabbtn" onclick="showTab('tab-domains',this)">🧩 AI-trend domains</button>
     <button class="tabbtn" onclick="showTab('tab-trends',this)">📈 Decision trends</button>
     <button class="tabbtn" onclick="showTab('tab-verdicts',this)">📋 All verdicts</button>
+    <button class="tabbtn" onclick="showTab('tab-research',this)">🔬 Research (X)</button>
+    <button class="tabbtn" onclick="showTab('tab-changes',this)">{{CHANGES_TAB}}</button>
   </nav>
 
   <section class="tabpanel active" id="tab-overview">
@@ -126,21 +140,22 @@
   </section>
 
   <section class="tabpanel" id="tab-domains">
-  <h2>AI-trend domain dashboards <span class="muted" style="text-transform:none;font-weight:400">· each layer of the build-out (optics, compute, power…), how it behaves, and its names</span></h2>
+  <h2>AI-trend domain dashboards <span class="muted" style="text-transform:none;font-weight:400">· grouped into generic buckets (compute, networking, photonics, power…); each card is a specific domain within its bucket, how it behaves, and its names</span></h2>
   <div class="filterbar">
-    <label class="muted" style="font-size:12px">Filter by domain: <select id="domsel" onchange="filtDom()">{{DOMAIN_OPTIONS}}</select></label>
+    <label class="muted" style="font-size:12px">Filter by bucket / domain: <select id="domsel" onchange="filtDom()">{{DOMAIN_OPTIONS}}</select></label>
     <span class="muted" id="domcnt" style="font-size:12px;margin-left:auto"></span>
   </div>
-  <div class="domcards">{{DOMAIN_CARDS}}</div>
+  {{DOMAIN_CARDS}}
 
   <h2>By AI build-out domain <span class="muted" style="text-transform:none;font-weight:400">· combined-verdict tilt per layer (summary table)</span></h2>
   <p class="sub" style="margin:-4px 0 10px">Tilt = mean combined-verdict score across the layer's latest verdicts (CONVICTION ALIGNED +2 · ALIGNED +1 · NEUTRAL/CONTESTED 0 · EXPOSED −1 · OFFSIDE −2). Layers flagged <i>contested</i> are where the lenses disagree (Leopold build-out tailwind vs Jordi ROIC caution).</p>
   <table id="dom">
     <thead><tr>
-      <th onclick="sortBy(0,this)">AI build-out domain</th>
-      <th onclick="sortBy(1,this,1)">Names</th>
-      <th onclick="sortBy(2,this)">Tickers <span class="muted">(by combined verdict)</span></th>
-      <th onclick="sortBy(3,this,1)">Tilt</th>
+      <th onclick="sortBy(0,this)">Bucket</th>
+      <th onclick="sortBy(1,this)">AI build-out domain</th>
+      <th onclick="sortBy(2,this,1)">Names</th>
+      <th onclick="sortBy(3,this)">Tickers <span class="muted">(by combined verdict)</span></th>
+      <th onclick="sortBy(4,this,1)">Tilt</th>
     </tr></thead>
     <tbody>{{BY_DOMAIN}}</tbody>
   </table>
@@ -149,16 +164,18 @@
   <table id="stk">
     <thead><tr>
       <th onclick="sortBy(0,this)">Ticker</th>
-      <th onclick="sortBy(1,this)">AI build-out domain</th>
-      <th onclick="sortBy(2,this,1)">Analyses</th>
-      <th onclick="sortBy(3,this)">Latest</th>
-      <th onclick="sortBy(4,this)">Latest call</th>
-      <th onclick="sortBy(5,this,1)">P(beat)</th>
-      <th onclick="sortBy(6,this)">Jensen</th>
-      <th onclick="sortBy(7,this)">Leopold</th>
-      <th onclick="sortBy(8,this)">Jordi</th>
-      <th onclick="sortBy(9,this)">Gavin</th>
-      <th onclick="sortBy(10,this)">Combined</th>
+      <th onclick="sortBy(1,this)">Bucket</th>
+      <th onclick="sortBy(2,this)">AI build-out domain</th>
+      <th onclick="sortBy(3,this,1)">Analyses</th>
+      <th onclick="sortBy(4,this)">Latest</th>
+      <th onclick="sortBy(5,this)">Latest call</th>
+      <th onclick="sortBy(6,this,1)">P(beat)</th>
+      <th onclick="sortBy(7,this)">Jensen</th>
+      <th onclick="sortBy(8,this)">Leopold</th>
+      <th onclick="sortBy(9,this)">Jordi</th>
+      <th onclick="sortBy(10,this)">Gavin</th>
+      <th onclick="sortBy(11,this)">X</th>
+      <th onclick="sortBy(12,this)">Combined</th>
     </tr></thead>
     <tbody>{{BY_STOCK}}</tbody>
   </table>
@@ -185,10 +202,22 @@
       <th onclick="sortBy(9,this)">Leopold</th>
       <th onclick="sortBy(10,this)">Jordi</th>
       <th onclick="sortBy(11,this)">Gavin</th>
-      <th onclick="sortBy(12,this,1)">Outcome</th>
+      <th onclick="sortBy(12,this)">X</th>
+      <th onclick="sortBy(13,this,1)">Outcome</th>
+      <th onclick="sortBy(14,this)">Bucket</th>
     </tr></thead>
     <tbody>{{TABLE_ROWS}}</tbody>
   </table>
+  </section>
+
+  <section class="tabpanel" id="tab-research">
+  <h2>X Research <span class="muted" style="text-transform:none;font-weight:400">· what FinTwit/AI is talking about — hot AI trends &amp; the most-bullish names (keyless X Brain corpus)</span></h2>
+  {{RESEARCH}}
+  </section>
+
+  <section class="tabpanel" id="tab-changes">
+  <h2>What changed <span class="muted" style="text-transform:none;font-weight:400">· the newest run diffed against the previous one — rating/verdict flips, forecast moves, new names, and X trend/sentiment shifts</span></h2>
+  {{CHANGES}}
   </section>
 
   <p class="disclaimer">Research scaffold only — not financial, investment, or trading advice.
@@ -215,12 +244,16 @@ function filtTrend(btn){var sig=btn.getAttribute('data-sig');var shown=0,total=0
     c.classList.toggle('hide',!ok);if(ok)shown++;});
   document.getElementById('trendcnt').textContent=shown+' of '+total+' shown';}
 
-function filtDom(){var d=document.getElementById('domsel').value;var n=0,c=0;
+function filtDom(){var v=document.getElementById('domsel').value;var n=0,c=0;
+  var isB=v.indexOf('bucket:')===0,bv=isB?v.slice(7):'';
+  function ok(el){return !v||(isB?el.getAttribute('data-bucket')===bv:el.getAttribute('data-domain')===v);}
   document.querySelectorAll('#stk tbody tr').forEach(function(r){
-    var ok=!d||r.getAttribute('data-domain')===d;r.style.display=ok?'':'none';if(ok)n++;});
+    var s=ok(r);r.style.display=s?'':'none';if(s)n++;});
   document.querySelectorAll('.domcards .domcard').forEach(function(card){
-    var ok=!d||card.getAttribute('data-domain')===d;card.classList.toggle('hide',!ok);if(ok)c++;});
-  document.getElementById('domcnt').textContent=(d?(c+' domain · '+n+' stocks · '+d):(c+' domains · '+n+' stocks'));}
+    var s=ok(card);card.classList.toggle('hide',!s);if(s)c++;});
+  document.querySelectorAll('.bucketsec').forEach(function(sec){
+    sec.classList.toggle('hide',sec.querySelectorAll('.domcard:not(.hide)').length===0);});
+  document.getElementById('domcnt').textContent=(v?(c+' domain'+(c==1?'':'s')+' · '+n+' stocks'):(c+' domains · '+n+' stocks'));}
 
 var dir={};
 function sortBy(i,th,num){var tbl=th.closest('table');var key=tbl.id+'_'+i;

@@ -1,6 +1,6 @@
 ---
 name: trading-analysis
-description: Run a TradingAgents-style multi-agent stock/asset analysis without any LLM API key, producing a calibrated 12–36 month return forecast — Claude plays every agent role (analysts, bull/bear researchers, trader, risk debate, portfolio manager) while reusing the project's own data-fetching scripts. Outputs bear/base/bull total-return scenarios, expected CAGR, and P(beats benchmark), then logs the forecast for later Brier-scoring. Concludes with four qualitative secular lenses — a "Jensen Brain Verdict" (would Jensen Huang / NVIDIA strategically back the company, from an index of 100+ Jensen interviews), a "Leopold Brain Verdict" (does the company fit Leopold Aschenbrenner's Situational Awareness AGI-build-out thesis, from his essay + interviews), a "Jordi Brain Verdict" (does the company sit with or against Jordi Visser's macro / AI-capex / creative-destruction thesis, from his @JordiVisserLabs channel), and a "Gavin Brain Verdict" (would Gavin Baker back it as an AI winner — is AI sustaining or disruptive to its moat — strict, from his long-form guest appearances) — then fuses all four into one strict "Combined Strategic Verdict". Use when the user asks to analyze a ticker, get a BUY/HOLD/SELL view or a multi-year price/return prediction, run "the trading agents", or do multi-agent financial analysis on a symbol and date.
+description: Run a TradingAgents-style multi-agent stock/asset analysis without any LLM API key, producing a calibrated 12–36 month return forecast — Claude plays every agent role (analysts, bull/bear researchers, trader, risk debate, portfolio manager) while reusing the project's own data-fetching scripts. Outputs bear/base/bull total-return scenarios, expected CAGR, and P(beats benchmark), then logs the forecast for later Brier-scoring. Concludes with four qualitative secular lenses — a "Jensen Brain Verdict" (would Jensen Huang / NVIDIA strategically back the company, from an index of 100+ Jensen interviews), a "Leopold Brain Verdict" (does the company fit Leopold Aschenbrenner's Situational Awareness AGI-build-out thesis, from his essay + interviews), a "Jordi Brain Verdict" (does the company sit with or against Jordi Visser's macro / AI-capex / creative-destruction thesis, from his @JordiVisserLabs channel), and a "Gavin Brain Verdict" (would Gavin Baker back it as an AI winner — is AI sustaining or disruptive to its moat — strict, from his long-form guest appearances) — then fuses all four into one strict "Combined Strategic Verdict", and overlays a separate "X Brain Verdict" (what X/Twitter FinTwit is saying — crowd sentiment + AI-trend buzz, keyless; not part of the fusion). Use when the user asks to analyze a ticker, get a BUY/HOLD/SELL view or a multi-year price/return prediction, run "the trading agents", or do multi-agent financial analysis on a symbol and date.
 ---
 
 # Trading Analysis — 12–36 month prediction tool (key-free, Claude-as-agents)
@@ -291,6 +291,40 @@ or commoditized** by AI leans *Cautious*; a framework-fit-but-no-direct-call lea
 - **Why:** 2–4 bullets on the sustaining-vs-disruptive read + whether it's a compute/data/distribution moat winner or a disruption casualty, and whether he backs the *specific name* vs the theme.
 - **In his words:** 1–3 short quoted snippets, each cited `(<date> — <venue/title>, <url>)`. Quote only retrieved text; never invent quotes. **If `gavin_direct_score` is low, do NOT issue a Conviction pick** — lean Possible/Insufficient and say the corpus is thin.
 
+### Stage 6.67 — X Brain Verdict (FinTwit crowd-sentiment + trend overlay)
+After the Gavin verdict, add an **X Brain Verdict**: what does **X (Twitter) FinTwit**
+think — is the crowd *net bullish or bearish* on the name, and does it ride a *currently-hot
+AI trend*? Judged only from what was actually posted (a keyless BM25 index over curated
+FinTwit/AI accounts via Nitter RSS + a Google-News proxy lane). This is a **crowd-sentiment
+overlay**, distinct from the four secular brains: it is **not a thesis**, it is the *latest,
+noisiest* signal, and it is **explicitly NOT part of the Combined Strategic Verdict** (Stage
+6.7 still fuses only Jensen/Leopold/Jordi/Gavin). Like the others it is **surfaced, not
+score-moving**: it does **not** alter the forecast or the BASE/MACRO ratings. Treat crowd
+sentiment with care — it is frequently a late or contrarian signal.
+
+Run the bridge to the X brain. From the repo root, pass alias terms — company, CEO, ticker,
+`$cashtag` — plus the hot AI trends the name touches:
+
+```
+python3 .claude/skills/trading-analysis/scripts/x_brain.py \
+    "<company> <CEO> <$cashtag/aliases>" \
+    --trend "<hot AI trends it touches: AI capex / inference / custom silicon / HBM / networking-optics / power / nuclear / robotics / agents / neocloud>" \
+    --k 5
+```
+(Set `X_HOME` if the x-brain project lives elsewhere; default `/home/ewexler/projects/x-brain`.
+ If the bridge reports the index is missing, note X Brain as unavailable and skip — do not fabricate.)
+
+The bridge returns five passage groups (direct mentions split X-POST vs X-NEWS, a bullish
+lens, a bearish lens, a trend lens) and a two-part **coverage signal** (`x_post_score`,
+`x_news_score`). Decide one verdict by weighing the **bull-vs-bear balance** and **trend
+alignment** — heavier convincing bullish chatter on a hot trend leans *Bullish buzz*; a
+dominant crash/bubble/downgrade tone leans *Bearish*; two-sided or off-trend leans *Mixed*;
+both scores thin leans *Insufficient chatter*. Map to:
+
+- **X Brain Verdict:** Bullish buzz / Mixed / Bearish / Insufficient chatter — with confidence (low/med/high).
+- **Why:** 2–4 bullets on the bull-vs-bear balance, the trend it rides (or not), and whether the signal is account-driven or news-lane-only (note if Nitter was down).
+- **In their words:** 1–3 short quoted snippets, each cited `(<date> — @account or source, <url>)`. Quote only retrieved text; never invent posts. If both coverage scores are ~0, say the crowd isn't discussing it.
+
 ### Stage 6.7 — Combined Strategic Verdict (strict)
 Finally, fuse the four secular lenses into **one strict Combined Strategic Verdict** — the
 single answer to *"is this name on the right side of the AI build-out?"* All four brains
@@ -331,7 +365,7 @@ the **thin-evidence flag** if either brain was Insufficient.
 ### Stage 7 — Persist the decision
 Save the final decision to a per-ticker file **and** append it to the memory log so the next run can learn from it.
 
-1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with the base proposal, macro-adjusted proposal, the `VERDICT FOR NEW INVESTORS:` line, the ratings, **and the forecast block (expected total return + scenarios + P(beats benchmark) + horizon)** so they parse cleanly, followed by the decision summary, key evidence, the plan, and at the end the **`Jensen Brain Verdict:` line**, the **`Leopold Brain Verdict:` line**, the **`Jordi Brain Verdict:` line**, the **`Gavin Brain Verdict:` line**, and the **`Combined Strategic Verdict:` line** (with its reconciliation sentence).
+1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with the base proposal, macro-adjusted proposal, the `VERDICT FOR NEW INVESTORS:` line, the ratings, **and the forecast block (expected total return + scenarios + P(beats benchmark) + horizon)** so they parse cleanly, followed by the decision summary, key evidence, the plan, and at the end the **`Jensen Brain Verdict:` line**, the **`Leopold Brain Verdict:` line**, the **`Jordi Brain Verdict:` line**, the **`Gavin Brain Verdict:` line**, the **`X Brain Verdict:` line** (the FinTwit sentiment overlay — separate from the four brains), and the **`Combined Strategic Verdict:` line** (with its reconciliation sentence).
 2. Log it **with the forecast probability and horizon** (so it can be Brier-scored at maturity):
 ```
 mkdir -p analyzed-stocks/TICKER
@@ -365,6 +399,7 @@ Present, in this order:
    - **Leopold Brain Verdict** (Stage 6.6): `Leopold Brain Verdict: **Thesis tailwind / Possible / Thesis headwind / Insufficient evidence**` + confidence, 2–4 why-bullets, and 1–3 cited quotes. A qualitative Situational-Awareness-thesis-fit lens.
    - **Jordi Brain Verdict** (Stage 6.65): `Jordi Brain Verdict: **Constructive / Possible / Cautious / Insufficient evidence**` + confidence, 2–4 why-bullets, and 1–3 cited quotes. A qualitative macro / AI-capex / creative-destruction thesis-fit lens.
    - **Gavin Brain Verdict** (Stage 6.66): `Gavin Brain Verdict: **Conviction pick / Possible / Cautious / Insufficient evidence**` + confidence, 2–4 why-bullets, and 1–3 cited quotes. A strict AI-stock-picker (sustaining-vs-disruptive) lens.
+   - **X Brain Verdict** (Stage 6.67): `X Brain Verdict: **Bullish buzz / Mixed / Bearish / Insufficient chatter**` + confidence, 2–4 why-bullets, and 1–3 cited posts. A FinTwit crowd-sentiment + AI-trend overlay — **separate from the four secular brains and NOT part of the Combined Strategic Verdict**; place it after Gavin and before Combined.
    - **Combined Strategic Verdict** (Stage 6.7): `Combined Strategic Verdict: **CONVICTION ALIGNED / ALIGNED / NEUTRAL / CONTESTED / EXPOSED / OFFSIDE / INSUFFICIENT**` derived strictly from the four brains' scores (sign-split ⇒ CONTESTED), followed by the one-to-two-sentence reconciliation with the MACRO-ADJUSTED financial call (and the thin-evidence flag if any brain was Insufficient).
 3. Collapsible/clearly-headed sections for each stage (4 analyst reports incl. the Expected-Return Model → research debate + plan → trader proposal → risk debate → PM decision).
 4. A one-line **data caveat** noting any source that returned no data / fell back, plus the reminder that a multi-year point forecast is uncertain, and the standard not-financial-advice disclaimer.

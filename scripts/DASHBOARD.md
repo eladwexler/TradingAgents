@@ -37,6 +37,47 @@ freeform decision files still render — they just have fewer badges).
   callout, and the full rendered decision markdown.
 - **`style.css`** — shared dark theme.
 
+### Buckets (generic categories)
+Each ticker's fine-grained `AI_DOMAIN` (e.g. "Optical interconnect & networking")
+rolls up into a broad **bucket** (`BUCKET` / `BUCKET_ORDER` in `build_dashboard.py`):
+Compute, Custom silicon (ASIC), Networking & connectivity, Photonics / optical,
+Memory, Semiconductor supply chain, Systems & servers, Cloud & datacenter capacity,
+Hyperscalers, Power & energy, Materials & storage, Software & applications,
+Cybersecurity, Physical AI & robotics, Quantum computing, Crypto / AI-macro,
+Other / outside AI. The **AI-trend domains** tab groups the domain cards under
+bucket headers; the filter dropdown is bucket-grouped with an "▸ All <bucket>"
+entry per group; and the By-domain, By-stock and All-verdicts tables each carry a
+sortable **Bucket** column. To add/retag a name: set its `AI_DOMAIN`, and (if it's a
+new micro-domain) map that micro-domain in `BUCKET`.
+
+### Research tab (X Brain)
+The **Research** tab reads `$X_HOME/index/research.json` (default
+`/home/ewexler/projects/x-brain/index/research.json`, produced by the x-brain project's
+`work/analyze_corpus.py`) and renders two keyless FinTwit/AI views: **most-talked AI
+trends** (mention-volume bars) and **most-bullish stocks** (buzz + a bull-vs-bear lexicon
+lean, sortable). If the file is absent the tab shows how to generate it. Each verdict table
+also carries an **X** column (the per-ticker `X Brain Verdict:` crowd-sentiment overlay,
+parsed from the decision files); it is a sentiment overlay and is **not** part of the
+Combined verdict.
+
+### Changes tab (week-over-week / latest-run diff)
+The **🔔 Changes** tab (with a header count badge) flags what moved in the **newest run vs.
+the previous one** — built for a weekly (or daily) cadence so you don't re-read every row:
+- **🆕 New names** — tickers analyzed in the latest batch with no prior decision on record.
+- **🔀 Rating & verdict flips** — rating, Combined Strategic Verdict, or any of the 5 brain
+  verdicts (Jensen/Leopold/Jordi/Gavin/X) changing, shown old→new. Only counts when *both*
+  sides exist (newly-added coverage isn't a "flip").
+- **📈 Forecast metric moves** — P(beat) (±0.03), Exp 24mo (±3pp), Priority (±5) with ▲/▼.
+- **🔬 X research shifts** — trends rising/falling/new in the ranking, and names flipping
+  Bullish↔Mixed↔Bearish or moving most in net sentiment.
+
+"Latest run" = the most recent decision date (±3 days for weekend spillover). Decision diffs
+come from the dated `analyzed-stocks/` history (no extra storage); X-research diffs need a
+prior snapshot, so `analyze_corpus.py` archives `index/research_history/<date>.json` each run
+and the dashboard diffs current vs the most recent older snapshot (the Research tab also gets
+inline ▲/▼/NEW trend deltas). On the first changes-enabled build the X section just says
+"baseline saved — appears after the next refresh."
+
 ### Decision trends (consistency check)
 For any stock analyzed 2+ times, the engine's rating is scored (Buy +2 … Sell −2) and
 plotted across runs. A change between consecutive runs is a **break** (ring on the chart);

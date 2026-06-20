@@ -1,30 +1,52 @@
 #!/usr/bin/env bash
-# update_all.sh — refresh EVERYTHING in the TradingAgents project, in one command.
-# Backs the /update skill. Each step is isolated: one failing never aborts the rest.
+# update_all.sh — refresh the DATA artifacts of the TradingAgents project, in one command.
+# Backs the /update-all skill's data phases. Each step is isolated: one failing never aborts
+# the rest. NOTE: this script does NOT run fresh per-ticker /trading-analysis — that is an
+# LLM pipeline (Claude plays every agent) and is orchestrated by the /update-all SKILL, which
+# sequences: (1) brains  ->  (2) fresh analyses [LLM]  ->  (3) dashboard + calibration.
 #
-#   1. Brains      — scripts/update_brains.sh (NVIDIA news + Situational-Awareness essay +
-#                    Jordi Visser's @JordiVisserLabs channel & news, incremental key-free
-#                    YouTube discovery, purity-filtered auto-ingest, and BM25 index rebuild
-#                    for all three brains: Jensen, Leopold, and Jordi).
+#   1. Brains      — scripts/update_brains.sh (ALL FIVE: Jensen NVIDIA news + Leopold
+#                    Situational-Awareness essay + Jordi @JordiVisserLabs channel & news +
+#                    Gavin Baker appearances & news, incremental key-free YouTube discovery,
+#                    purity-filtered auto-ingest, BM25 rebuild — plus the X Brain: keyless
+#                    FinTwit/AI posts + news lane + research.json/snapshot for the dashboard's
+#                    Research & Changes tabs).
 #   2. Dashboard   — scripts/build_dashboard.py (regenerate dashboard/ HTML from the
-#                    decision log + analyzed-stocks/).
+#                    decision log + analyzed-stocks/, incl. the Changes/Research tabs).
 #   3. Calibration — ta_memory.py pending + score (surface matured-but-unresolved
 #                    forecasts to grade, and print the standing Brier/alpha scorecard).
 #                    Resolution stays manual on purpose — it needs a written reflection.
 #
 # Usage:
-#   scripts/update_all.sh              # everything
-#   scripts/update_all.sh --no-brains  # skip the (slow) brain discovery/rebuild
-#   scripts/update_all.sh --no-dash    # skip the dashboard rebuild
-#   scripts/update_all.sh --brains-only | --dash-only
+#   scripts/update_all.sh                # data refresh: brains + dashboard + calibration
+#   scripts/update_all.sh --brains-only  # just refresh the 5 brains (run BEFORE analyses)
+#   scripts/update_all.sh --no-brains    # dashboard + calibration (run AFTER analyses)
+#   scripts/update_all.sh --dash-only    # just rebuild the dashboard
+#   scripts/update_all.sh --analysis-plan  # print tickers still needing today's analysis
 #
 # Env: PYTHON (default python3); plus all update_brains.sh knobs (JENSEN_HOME,
-#      LEOPOLD_HOME, DISCOVER_SINCE, …) and TRADINGAGENTS_MEMORY_LOG_PATH.
+#      LEOPOLD_HOME, JORDI_HOME, GAVIN_HOME, X_HOME, NITTER_INSTANCES, DISCOVER_SINCE, …)
+#      and TRADINGAGENTS_MEMORY_LOG_PATH.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PY="${PYTHON:-python3}"
 TA_MEM="$ROOT/.claude/skills/trading-analysis/scripts/ta_memory.py"
+
+# --analysis-plan : print the resumable worklist for the LLM analysis phase — every
+# tracked ticker (a dir under analyzed-stocks/) that does NOT yet have a decision file
+# dated today. The /update-all SKILL iterates this and runs /trading-analysis per ticker.
+# (Fresh per-ticker analysis is an LLM step; this script can't do it — it only lists.)
+case "${1:-}" in
+  --analysis-plan|--plan|--list-tickers)
+    today="$(date +%F)"
+    for d in "$ROOT"/analyzed-stocks/*/; do
+      [ -d "$d" ] || continue
+      tk="$(basename "$d")"
+      [ -f "${d}${today}_decision.md" ] || echo "$tk"
+    done
+    exit 0 ;;
+esac
 
 DO_BRAINS=1; DO_DASH=1; DO_CAL=1
 for arg in "$@"; do
@@ -68,4 +90,15 @@ if [ "$DO_CAL" = 1 ]; then
 fi
 
 echo
-echo "==== update_all done ===="
+echo "==== update_all done (data refresh) ===="
+# Informational: /update-all refreshes data only. Fresh per-ticker /trading-analysis is run
+# ON DEMAND by you (it's an LLM pipeline). This just shows what's stale, as a convenience.
+if [ "$DO_DASH" = 1 ]; then
+  pending_n="$(bash "$ROOT/scripts/update_all.sh" --analysis-plan | grep -c . || true)"
+  if [ "${pending_n:-0}" -gt 0 ]; then
+    echo
+    echo "FYI: $pending_n tracked ticker(s) have no analysis dated today. Re-analyze them"
+    echo "     on demand with /trading-analysis (each persists + rebuilds the dashboard)."
+    echo "     See the list:  scripts/update_all.sh --analysis-plan"
+  fi
+fi

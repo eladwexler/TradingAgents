@@ -9,6 +9,8 @@ that live *outside* this repo:
 | Jensen | `/home/ewexler/projects/jensen-brain` (`$JENSEN_HOME`) | what Jensen **said** (`transcripts/`) + what NVIDIA **did** (`materials/`) |
 | Leopold | `/home/ewexler/projects/leopold-brain` (`$LEOPOLD_HOME`) | what Leopold **wrote** (essay) + **said** (interviews), in `writings/` |
 | Jordi | `/home/ewexler/projects/jordi-brain` (`$JORDI_HOME`) | what Jordi **said** (`transcripts/` = @JordiVisserLabs) + **news** (`materials/`) |
+| Gavin | `/home/ewexler/projects/gavin-brain` (`$GAVIN_HOME`) | what Gavin **said** (guest appearances, search+purity) + **news** (`materials/`) |
+| X | `/home/ewexler/projects/x-brain` (`$X_HOME`) | what FinTwit **posts** (`posts/` via keyless Nitter RSS) + **news proxy** (`materials/`); `work/analyze_corpus.py` → `index/research.json` for the dashboard Research tab. Crowd-sentiment overlay (Stage 6.67) — **not** in the Combined verdict. |
 
 The TradingAgents bridges (`.claude/skills/trading-analysis/scripts/jensen_brain.py`,
 `leopold_brain.py`) read each brain's `index/chunks.jsonl` directly. **So the only

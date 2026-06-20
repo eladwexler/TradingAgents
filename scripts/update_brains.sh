@@ -10,6 +10,9 @@
 #                   a keyless news lane. Single owned channel, so no purity filter needed.
 #   Gavin Brain   = what Gavin Baker *said* (long-form guest appearances — BG2, Invest
 #                   Like the Best, Aleph, a16z… via STRICT search+purity) + a news lane.
+#   X Brain       = what FinTwit/AI *posts* (curated accounts via keyless Nitter RSS) +
+#                   a Google-News proxy lane; also recomputes research.json (trending AI
+#                   topics + most-bullish names) for the dashboard's Research tab.
 #
 # The TradingAgents bridges (scripts/jensen_brain.py / leopold_brain.py) read each
 # brain's index/chunks.jsonl directly, so rebuilding the index is all that's needed
@@ -44,6 +47,7 @@ JENSEN_HOME="${JENSEN_HOME:-/home/ewexler/projects/jensen-brain}"
 LEOPOLD_HOME="${LEOPOLD_HOME:-/home/ewexler/projects/leopold-brain}"
 JORDI_HOME="${JORDI_HOME:-/home/ewexler/projects/jordi-brain}"
 GAVIN_HOME="${GAVIN_HOME:-/home/ewexler/projects/gavin-brain}"
+X_HOME="${X_HOME:-/home/ewexler/projects/x-brain}"
 PY="${PYTHON:-python3}"
 WHICH="${1:-both}"
 
@@ -109,6 +113,21 @@ update_gavin() {
   echo "   chunks: $before -> $(chunks "$GAVIN_HOME")"
 }
 
+update_x() {
+  echo "================ X BRAIN ($X_HOME) ================"
+  if [ ! -d "$X_HOME" ]; then echo "  [skip] not found"; return; fi
+  local before; before=$(chunks "$X_HOME")
+  echo "-- fetch curated FinTwit/AI posts (keyless Nitter RSS, idempotent; best-effort) --"
+  ( cd "$X_HOME" && "$PY" work/fetch_accounts.py ) || echo "  [warn] account fetch failed (no live Nitter?) — relying on the news lane"
+  echo "-- fetch AI-trend + stock-chatter news lane (keyless Google News RSS, idempotent) --"
+  ( cd "$X_HOME" && "$PY" work/fetch_trends.py ) || echo "  [warn] trend fetch failed (offline?)"
+  echo "-- rebuild index --"
+  ( cd "$X_HOME" && "$PY" index/build_index.py )
+  echo "-- recompute research.json (trending AI topics + most-bullish names) --"
+  ( cd "$X_HOME" && "$PY" work/analyze_corpus.py ) || echo "  [warn] analyze_corpus failed"
+  echo "   chunks: $before -> $(chunks "$X_HOME")"
+}
+
 # Transcribe REVIEWED pending_<brain>.tsv rows (the human-review tier), then rebuild.
 ingest_brain() {
   local home="$1" name="$2" pending="$3"
@@ -127,12 +146,13 @@ case "$WHICH" in
   leopold) update_leopold ;;
   jordi)   update_jordi ;;
   gavin)   update_gavin ;;
-  both|all|"") update_jensen; echo; update_leopold; echo; update_jordi; echo; update_gavin ;;
+  x)       update_x ;;
+  both|all|"") update_jensen; echo; update_leopold; echo; update_jordi; echo; update_gavin; echo; update_x ;;
   ingest)  ingest_brain "$JENSEN_HOME" "JENSEN" "pending_jensen.tsv"; echo; ingest_brain "$LEOPOLD_HOME" "LEOPOLD" "pending_leopold.tsv"; echo; ingest_brain "$GAVIN_HOME" "GAVIN" "pending_gavin.tsv" ;;
   ingest-jensen)  ingest_brain "$JENSEN_HOME" "JENSEN" "pending_jensen.tsv" ;;
   ingest-leopold) ingest_brain "$LEOPOLD_HOME" "LEOPOLD" "pending_leopold.tsv" ;;
   ingest-gavin)   ingest_brain "$GAVIN_HOME" "GAVIN" "pending_gavin.tsv" ;;
-  *) echo "usage: $0 [jensen|leopold|jordi|gavin|both|ingest|ingest-jensen|ingest-leopold|ingest-gavin]"; exit 2 ;;
+  *) echo "usage: $0 [jensen|leopold|jordi|gavin|x|both|ingest|ingest-jensen|ingest-leopold|ingest-gavin]"; exit 2 ;;
 esac
 
 echo
@@ -151,3 +171,4 @@ echo "  python3 $JENSEN_HOME/index/search.py  'AI factory power grid data center
 echo "  python3 $LEOPOLD_HOME/index/search.py 'trillion dollar cluster power electricity' --k 3"
 echo "  python3 $JORDI_HOME/index/search.py   'AI capex scarcity SaaS disruption bitcoin' --k 3"
 echo "  python3 $GAVIN_HOME/index/search.py   'AI sustaining disruptive compute moat NVIDIA' --k 3"
+echo "  python3 $X_HOME/index/search.py       'NVDA AI datacenter bullish' --k 3"

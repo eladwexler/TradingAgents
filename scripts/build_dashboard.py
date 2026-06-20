@@ -13,7 +13,7 @@ Sources of truth:
 Output -> dashboard/ (open dashboard/index.html).
 Rebuild:  python3 scripts/build_dashboard.py
 """
-import os, re, glob, html, datetime
+import os, re, glob, html, json, datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TPL = os.path.join(ROOT, "scripts", "templates")
@@ -21,7 +21,37 @@ OUT = os.path.join(ROOT, "dashboard")
 STOCKS = os.path.join(ROOT, "analyzed-stocks")
 MEM = os.environ.get("TRADINGAGENTS_MEMORY_LOG_PATH",
                      os.path.expanduser("~/.tradingagents/memory/trading_memory.md"))
+# X Brain research artifact (trending AI topics + most-bullish names); optional.
+X_HOME = os.environ.get("X_HOME", "/home/ewexler/projects/x-brain")
+X_RESEARCH = os.path.join(X_HOME, "index", "research.json")
+X_HIST = os.path.join(X_HOME, "index", "research_history")
 NOW = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+
+
+def load_x_research(path):
+    """X-brain research.json (trends + bullish stocks), or {} if unavailable."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def load_prev_research(cur):
+    """Most recent dated research snapshot strictly older than the current one (for diffing)."""
+    cur_date = (cur.get("generated", "") or "")[:10]
+    try:
+        snaps = sorted(f for f in os.listdir(X_HIST) if f.endswith(".json"))
+    except Exception:
+        return {}
+    prev = [f for f in snaps if f[:10] < cur_date]
+    if not prev:
+        return {}
+    try:
+        with open(os.path.join(X_HIST, prev[-1]), encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 # ---------- parsing ----------------------------------------------------------
 
@@ -113,6 +143,7 @@ def parse_decision(path):
     d["leopold"] = grab(r"Leopold Brain Verdict:\s*\**\s*([A-Za-z ]+?)\**\s*[(\-—\n]", md)
     d["jordi"] = grab(r"Jordi Brain Verdict:\s*\**\s*([A-Za-z ]+?)\**\s*[(\-—\n]", md)
     d["gavin"] = grab(r"Gavin Brain Verdict:\s*\**\s*([A-Za-z ]+?)\**\s*[(\-—\n]", md)
+    d["x"] = grab(r"X Brain Verdict:\s*\**\s*([A-Za-z ]+?)\**\s*[(\-—\n]", md)
     d["combined"] = grab(r"Combined Strategic Verdict:\s*\**\s*([A-Z ]+?)\**\s*[(\-—\.\n]", md)
     d["forecast"] = parse_forecast(md)
     return d
@@ -224,6 +255,95 @@ DOMAIN_NOTE = {
     "Outside the AI build-out (biotech)": "Not an AI-build-out name — judged on its own merits.",
 }
 
+# ---------- buckets: generic categories that group the micro-domains ---------
+# Each fine-grained AI_DOMAIN rolls up into one broad bucket (compute, networking,
+# photonics, power…) so names can be grouped & sorted by category, with the
+# specific domain kept underneath.
+BUCKET = {
+    # Compute
+    "Compute — GPU accelerators": "Compute",
+    "Compute IP / CPU architecture": "Compute",
+    "Compute — edge / mobile AI": "Compute",
+    "Edge AI compute": "Compute",
+    # Custom silicon
+    "Custom AI silicon & networking (ASIC)": "Custom silicon (ASIC)",
+    "Custom AI silicon & optical DSP (ASIC)": "Custom silicon (ASIC)",
+    # Networking & connectivity
+    "AI connectivity silicon (retimers/PCIe)": "Networking & connectivity",
+    "AI connectivity silicon (active cables)": "Networking & connectivity",
+    "AI networking (datacenter switching)": "Networking & connectivity",
+    # Photonics / optical
+    "Optical interconnect & networking": "Photonics / optical",
+    # Memory
+    "Memory / HBM": "Memory",
+    # Semiconductor supply chain
+    "Semiconductor materials / fab supply": "Semiconductor supply chain",
+    "Semiconductor test equipment": "Semiconductor supply chain",
+    # Systems & servers
+    "AI servers & systems (OEM)": "Systems & servers",
+    "AI infrastructure / HPC integration": "Systems & servers",
+    "AI infrastructure / datacenter": "Systems & servers",
+    # Cloud & datacenter capacity
+    "Neocloud / GPU cloud capacity": "Cloud & datacenter capacity",
+    "Neocloud / datacenter capacity": "Cloud & datacenter capacity",
+    "Neocloud / GPU capacity (ex-bitcoin miner)": "Cloud & datacenter capacity",
+    "Neocloud / AI compute (micro-cap)": "Cloud & datacenter capacity",
+    "Neocloud / renewable datacenter": "Cloud & datacenter capacity",
+    # Hyperscalers
+    "Hyperscaler / cloud platform": "Hyperscalers",
+    # Power & energy
+    "Power generation (nuclear)": "Power & energy",
+    "Power generation (nuclear SMR)": "Power & energy",
+    "Power generation (fuel cells)": "Power & energy",
+    "Power generation (grid / turbines)": "Power & energy",
+    "Power generation (distributed)": "Power & energy",
+    "Power / clean energy": "Power & energy",
+    "Electrical / grid infrastructure": "Power & energy",
+    "Datacenter power & cooling": "Power & energy",
+    "Datacenter power & electrical": "Power & energy",
+    "Power semiconductors (GaN/SiC)": "Power & energy",
+    # Materials & storage
+    "Battery materials (lithium)": "Materials & storage",
+    "Battery / energy storage": "Materials & storage",
+    "Rare earths / critical minerals": "Materials & storage",
+    # Software & applications
+    "AI application software & agents": "Software & applications",
+    "AI application software (enterprise SaaS)": "Software & applications",
+    "AI application software (data cloud)": "Software & applications",
+    "AI application software (automation/agents)": "Software & applications",
+    "AI application software (marketing)": "Software & applications",
+    # Cybersecurity
+    "Cybersecurity": "Cybersecurity",
+    # Physical AI
+    "Physical AI / robotics & autonomy": "Physical AI & robotics",
+    # Quantum
+    "Quantum computing": "Quantum computing",
+    # Crypto / AI-macro
+    "Bitcoin / crypto (AI-macro)": "Crypto / AI-macro",
+    # Other / outside AI
+    "Fintech / consumer finance": "Other / outside AI",
+    "Outside the AI build-out (biotech)": "Other / outside AI",
+    "Unverified / AI-adjacent": "Other / outside AI",
+    "Unverified": "Other / outside AI",
+}
+
+# bucket display order — roughly hardware-up the stack, then off-thesis
+BUCKET_ORDER = ["Compute", "Custom silicon (ASIC)", "Networking & connectivity",
+                "Photonics / optical", "Memory", "Semiconductor supply chain",
+                "Systems & servers", "Cloud & datacenter capacity", "Hyperscalers",
+                "Power & energy", "Materials & storage", "Software & applications",
+                "Cybersecurity", "Physical AI & robotics", "Quantum computing",
+                "Crypto / AI-macro", "Other / outside AI"]
+
+def bucket_for_domain(dom):
+    return BUCKET.get(dom, "Other / outside AI")
+
+def bucket_for(ticker):
+    return bucket_for_domain(AI_DOMAIN.get(ticker, "—"))
+
+def bucket_rank(b):
+    return BUCKET_ORDER.index(b) if b in BUCKET_ORDER else len(BUCKET_ORDER)
+
 # ---------- classification helpers ------------------------------------------
 
 def cls_action(a):
@@ -249,6 +369,14 @@ def cls_brain(v):
     if "tailwind" in v or "likely" in v or "constructive" in v or "conviction" in v: return "b-buy"
     if "headwind" in v or "unlikely" in v or "cautious" in v or "avoid" in v: return "b-sell"
     if "possible" in v: return "b-hold"
+    return "b-neu"
+
+def cls_x(v):
+    """X Brain crowd-sentiment verdict → badge class."""
+    v = (v or "").lower()
+    if "bullish" in v: return "b-buy"
+    if "bearish" in v: return "b-sell"
+    if "mixed" in v: return "b-hold"
     return "b-neu"
 
 # combined-verdict -> numeric secular tilt (used by the by-domain rollup + priority)
@@ -437,6 +565,222 @@ def forecast_html(fc):
     th = "".join(f"<th>{c}</th>" for c in head)
     return f'<table><thead><tr>{th}</tr></thead><tbody>{rows}</tbody></table>'
 
+# ---------- Research tab (X-brain trends + bullish names) --------------------
+
+def _x_lean_cls(lean):
+    return {"Bullish": "b-pos", "Bearish": "b-neg"}.get(lean, "muted")
+
+def build_research(rx, rx_prev=None):
+    """Render the X-brain research.json (trends + bullish stocks) into the Research tab.
+    If rx_prev (a prior snapshot) is given, annotate inline ▲/▼/NEW deltas."""
+    if not rx:
+        return ('<p class="muted">No X-brain research found. Generate it with '
+                '<code>python3 work/fetch_trends.py &amp;&amp; python3 index/build_index.py &amp;&amp; '
+                'python3 work/analyze_corpus.py</code> in the x-brain project '
+                '(or run <code>/update-all</code>), then rebuild this dashboard.</p>')
+    trends = rx.get("trends", [])
+    bullish = rx.get("bullish", [])
+    meta = (f'<p class="sub" style="margin:-4px 0 12px">From the X Brain corpus — '
+            f'{rx.get("n_posts",0)} curated-account posts + {rx.get("n_news",0)} news-lane items '
+            f'({rx.get("n_chunks",0)} chunks) · generated {html.escape(str(rx.get("generated","")))}. '
+            f'Keyless FinTwit/AI signal — coarse lexicon sentiment, <b>not</b> advice.</p>')
+
+    # trending AI topics — horizontal bars scaled to the top topic (+ rank delta vs prev)
+    prev_rank = {t["topic"]: i for i, t in enumerate((rx_prev or {}).get("trends", []))}
+    tmax = max((t["mentions"] for t in trends), default=1) or 1
+    trows = ""
+    for i, t in enumerate(trends):
+        w = max(3, round(100 * t["mentions"] / tmax))
+        delta = ""
+        if rx_prev:
+            if t["topic"] not in prev_rank:
+                delta = ' <span class="b-pos" title="new on the board">NEW</span>'
+            else:
+                d = prev_rank[t["topic"]] - i
+                if d >= 1:
+                    delta = f' <span class="b-pos" title="up {d}">▲{d}</span>'
+                elif d <= -1:
+                    delta = f' <span class="b-neg" title="down {-d}">▼{-d}</span>'
+        trows += (f'<li><span class="tk" style="min-width:210px">{html.escape(t["topic"])}{delta}</span>'
+                  f'<span class="bar" style="width:{w}%"></span>'
+                  f'<span class="muted">{t["mentions"]}</span></li>')
+    trends_html = (f'<ol class="xbars">{trows}</ol>' if trows else
+                   '<p class="muted">No trend signal in the corpus yet.</p>')
+
+    # most-bullish names — sortable table
+    def _b(v, c):
+        return f'<span class="badge {c}">{html.escape(str(v))}</span>'
+    brows = ""
+    for r in bullish:
+        # clicking the name opens the live X cashtag search — see the actual FinTwit chatter
+        tk = html.escape(r["ticker"])
+        xurl = f'https://x.com/search?q=%24{tk}&f=live'
+        tkcell = (f'<a href="{xurl}" target="_blank" rel="noopener" '
+                  f'title="live X chatter for ${tk}">{tk}</a>')
+        brows += (
+            f'<tr>'
+            f'<td><b>{tkcell}</b></td>'
+            f'<td class="num" data-s="{r["mentions"]}">{r["mentions"]}</td>'
+            f'<td>{_b(r["lean"], _x_lean_cls(r["lean"]))}</td>'
+            f'<td class="num b-pos" data-s="{r["bull"]}">{r["bull"]}</td>'
+            f'<td class="num b-neg" data-s="{r["bear"]}">{r["bear"]}</td>'
+            f'<td class="num" data-s="{r["net"]}">{r["net"]:+d}</td>'
+            f'<td class="num" data-s="{r["ratio"]}">{r["ratio"]:.2f}</td>'
+            f'<td class="muted" data-s="{html.escape(r.get("date",""))}" style="white-space:nowrap">{html.escape(r.get("date",""))}</td>'
+            f'</tr>')
+    bullish_html = (
+        '<table id="xbull"><thead><tr>'
+        '<th onclick="sortBy(0,this)">Ticker</th>'
+        '<th onclick="sortBy(1,this,1)">Buzz (mentions)</th>'
+        '<th onclick="sortBy(2,this)">Lean</th>'
+        '<th onclick="sortBy(3,this,1)">Bull words</th>'
+        '<th onclick="sortBy(4,this,1)">Bear words</th>'
+        '<th onclick="sortBy(5,this,1)">Net</th>'
+        '<th onclick="sortBy(6,this,1)">Bull ratio</th>'
+        '<th onclick="sortBy(7,this)">Latest</th>'
+        f'</tr></thead><tbody>{brows}</tbody></table>') if brows else \
+        '<p class="muted">No per-name sentiment in the corpus yet.</p>'
+
+    return (
+        f'{meta}'
+        f'<h2>🔥 Most-talked AI trends on X <span class="muted" style="text-transform:none;font-weight:400">· by mention volume in the corpus</span></h2>'
+        f'{trends_html}'
+        f'<h2>🐂 Most-bullish stocks on X <span class="muted" style="text-transform:none;font-weight:400">· buzz (mentions) + bull-vs-bear lexicon lean · click a ticker for live X chatter ($cashtag), a header to sort</span></h2>'
+        f'{bullish_html}')
+
+# ---------- Changes tab (week-over-week / latest-run diff) -------------------
+
+def _dparse(s):
+    try:
+        return datetime.datetime.strptime(s[:10], "%Y-%m-%d")
+    except Exception:
+        return None
+
+def compute_changes(recs, by_ticker, rx_cur, rx_prev):
+    """Return (events, count). events = list of dicts grouped by 'group'."""
+    ev = []
+    dates = [r["date"] for r in recs if r.get("date")]
+    latest_dt = _dparse(max(dates)) if dates else None
+    def recent(d):  # within the latest run batch (≤3 days of newest date) — daily or weekly
+        dt = _dparse(d)
+        return dt is not None and latest_dt is not None and (latest_dt - dt).days <= 3
+
+    BRAINS = [("jensen", "Jensen"), ("leopold", "Leopold"), ("jordi", "Jordi"),
+              ("gavin", "Gavin"), ("x", "X")]
+    for tk, rs in (by_ticker or {}).items():
+        runs = sorted(rs, key=lambda r: r["date"])
+        cur = runs[-1]
+        if not recent(cur["date"]):
+            continue                              # only flag the just-completed run
+        if len(runs) < 2:
+            ev.append({"group": "new", "ticker": tk, "date": cur["date"],
+                       "text": f'first analysis on record'})
+            continue
+        prev = runs[-2]
+        sub = f'{prev["date"]} → {cur["date"]}'
+        # rating flip (both sides must be present — ignore newly-added fields)
+        if cur["rating"] and prev["rating"] and rating_score(cur["rating"]) != rating_score(prev["rating"]):
+            ev.append({"group": "flip", "ticker": tk, "date": cur["date"], "field": "Rating",
+                       "old": prev["rating"] or "—", "new": cur["rating"] or "—",
+                       "ocls": cls_rating(prev["rating"]), "ncls": cls_rating(cur["rating"]), "sub": sub})
+        # combined verdict flip
+        if cur["combined"] and prev["combined"] and (cur["combined"]).upper() != (prev["combined"]).upper():
+            ev.append({"group": "flip", "ticker": tk, "date": cur["date"], "field": "Combined",
+                       "old": prev["combined"] or "—", "new": cur["combined"] or "—",
+                       "ocls": cls_combined(prev["combined"]), "ncls": cls_combined(cur["combined"]), "sub": sub})
+        # brain flips (only when a real before AND after exist — not newly-added coverage)
+        for key, label in BRAINS:
+            if cur.get(key) and prev.get(key) and cur.get(key) != prev.get(key):
+                ocls = cls_x(prev.get(key)) if key == "x" else cls_brain(prev.get(key))
+                ncls = cls_x(cur.get(key)) if key == "x" else cls_brain(cur.get(key))
+                ev.append({"group": "flip", "ticker": tk, "date": cur["date"], "field": f'{label} Brain',
+                           "old": prev.get(key) or "—", "new": cur.get(key) or "—",
+                           "ocls": ocls, "ncls": ncls, "sub": sub})
+        # metric moves (with thresholds so noise doesn't spam)
+        def move(field, o, n, thr, fmt, pct=False):
+            if o is None or n is None or abs(n - o) < thr:
+                return
+            d = "up" if n > o else "down"
+            ev.append({"group": "metric", "ticker": tk, "date": cur["date"], "field": field,
+                       "old": fmt(o), "new": fmt(n), "dir": d, "sub": sub})
+        move("P(beat)", prev["pbeat_n"], cur["pbeat_n"], 0.03, lambda v: f"{v:.2f}")
+        move("Exp 24mo", prev["exp24_n"], cur["exp24_n"], 3.0, lambda v: f"{v:+.0f}%")
+        move("Priority", float(priority_100(prev)), float(priority_100(cur)), 5.0, lambda v: f"{v:.0f}")
+
+    # ---- X research diff (trends + bullish), if we have a prior snapshot ----
+    if rx_cur and rx_prev:
+        pdate = (rx_prev.get("generated", "") or "")[:10]
+        # trends: rank movement
+        cur_t = [t["topic"] for t in rx_cur.get("trends", [])]
+        prev_t = {t["topic"]: i for i, t in enumerate(rx_prev.get("trends", []))}
+        for i, topic in enumerate(cur_t):
+            if topic not in prev_t:
+                ev.append({"group": "x", "kind": "trend", "date": pdate, "dir": "new",
+                           "text": f'trend <b>{html.escape(topic)}</b> entered the board (#{i+1})'})
+            else:
+                d = prev_t[topic] - i  # positive = moved up
+                if abs(d) >= 2:
+                    ev.append({"group": "x", "kind": "trend", "date": pdate,
+                               "dir": "up" if d > 0 else "down",
+                               "text": f'trend <b>{html.escape(topic)}</b> #{prev_t[topic]+1} → #{i+1}'})
+        # bullish: lean flips, new names, big net moves
+        prev_b = {b["ticker"]: b for b in rx_prev.get("bullish", [])}
+        for b in rx_cur.get("bullish", []):
+            tk = b["ticker"]; p = prev_b.get(tk)
+            if not p:
+                continue
+            if b.get("lean") != p.get("lean"):
+                ev.append({"group": "x", "kind": "lean", "ticker": tk, "date": pdate, "dir": "flip",
+                           "text": f'<b>{tk}</b> X sentiment {html.escape(p.get("lean",""))} → '
+                                   f'{html.escape(b.get("lean",""))}'})
+            elif abs(b.get("net", 0) - p.get("net", 0)) >= 25:
+                d = b["net"] - p["net"]
+                ev.append({"group": "x", "kind": "net", "ticker": tk, "date": pdate,
+                           "dir": "up" if d > 0 else "down",
+                           "text": f'<b>{tk}</b> X net sentiment {p["net"]:+d} → {b["net"]:+d}'})
+    return ev, len(ev)
+
+
+def build_changes(ev, rx_prev):
+    if not ev:
+        return ('<p class="muted">No changes detected in the latest run yet. Re-run the analysis '
+                '(or <code>/update-all</code>); this view diffs the newest run against the previous one.</p>')
+    arrow = {"up": '<span class="b-pos">▲</span>', "down": '<span class="b-neg">▼</span>',
+             "flip": '<span class="muted">⇄</span>', "new": '<span class="b-pos">＋</span>'}
+    def tklink(tk):
+        return f'<a href="{tk}_*">{tk}</a>' if False else f'<b>{tk}</b>'
+    groups = {"new": [], "flip": [], "metric": [], "x": []}
+    for e in ev:
+        groups.get(e["group"], groups["flip"]).append(e)
+    out = []
+    if groups["new"]:
+        items = "".join(f'<li>{arrow["new"]} <b>{e["ticker"]}</b> <span class="muted">{e["text"]} · {e["date"]}</span></li>'
+                        for e in sorted(groups["new"], key=lambda e: e["ticker"]))
+        out.append(f'<h2>🆕 New names analyzed <span class="muted">({len(groups["new"])})</span></h2><ul class="chg">{items}</ul>')
+    if groups["flip"]:
+        rows = ""
+        for e in sorted(groups["flip"], key=lambda e: (e["date"], e["ticker"]), reverse=True):
+            rows += (f'<li><b>{e["ticker"]}</b> <span class="cf">{e["field"]}</span> '
+                     f'<span class="badge {e["ocls"]}">{html.escape(e["old"])}</span> → '
+                     f'<span class="badge {e["ncls"]}">{html.escape(e["new"])}</span> '
+                     f'<span class="muted">{e["sub"]}</span></li>')
+        out.append(f'<h2>🔀 Rating &amp; verdict flips <span class="muted">({len(groups["flip"])})</span></h2><ul class="chg">{rows}</ul>')
+    if groups["metric"]:
+        rows = ""
+        for e in sorted(groups["metric"], key=lambda e: (e["date"], e["ticker"]), reverse=True):
+            rows += (f'<li><b>{e["ticker"]}</b> <span class="cf">{e["field"]}</span> '
+                     f'{html.escape(e["old"])} → {html.escape(e["new"])} {arrow.get(e["dir"],"")} '
+                     f'<span class="muted">{e["sub"]}</span></li>')
+        out.append(f'<h2>📈 Forecast metric moves <span class="muted">({len(groups["metric"])})</span></h2><ul class="chg">{rows}</ul>')
+    if groups["x"]:
+        rows = "".join(f'<li>{arrow.get(e["dir"],"")} {e["text"]} <span class="muted">· vs {e["date"]}</span></li>'
+                       for e in groups["x"])
+        out.append(f'<h2>🔬 X research shifts <span class="muted">({len(groups["x"])})</span></h2><ul class="chg">{rows}</ul>')
+    elif not rx_prev:
+        out.append('<h2>🔬 X research shifts</h2><p class="muted">Baseline snapshot saved — '
+                   'trend &amp; sentiment changes will appear here after the next refresh.</p>')
+    return "\n".join(out)
+
 # ---------- build ------------------------------------------------------------
 
 def main():
@@ -453,7 +797,7 @@ def main():
     for (date, tk) in keys:
         d = decisions.get((date, tk), {"ticker": tk, "date": date, "name": "", "md": "",
                                        "src": "", "forecast": {}, "verdict_new": "",
-                                       "jensen": "", "leopold": "", "jordi": "", "gavin": "", "combined": "",
+                                       "jensen": "", "leopold": "", "jordi": "", "gavin": "", "x": "", "combined": "",
                                        "base_action": "", "base_rating": "",
                                        "macro_action": "", "macro_rating": ""})
         m = mem.get((date, tk), {})
@@ -532,6 +876,7 @@ def main():
             "{{LEOPOLD}}": r["leopold"] or "n/a", "{{LEOPOLD_CLS}}": cls_brain(r["leopold"]),
             "{{JORDI}}": r["jordi"] or "n/a", "{{JORDI_CLS}}": cls_brain(r["jordi"]),
             "{{GAVIN}}": r["gavin"] or "n/a", "{{GAVIN_CLS}}": cls_brain(r["gavin"]),
+            "{{X}}": r["x"] or "n/a", "{{X_CLS}}": cls_x(r["x"]),
             "{{COMBINED}}": r["combined"] or "n/a", "{{COMBINED_CLS}}": cls_combined(r["combined"]),
             "{{VERDICT_NEW}}": inline(r["verdict_new"]) if r["verdict_new"] else '<span class="muted">—</span>',
             "{{FORECAST_TABLE}}": forecast_html(r["forecast"]),
@@ -609,33 +954,62 @@ def main():
         return (f'<li><span class="tk">{tk}</span> {call} {cb} '
                 f'<span class="badge {cls_priority(p)}" title="priority">P{p}</span></li>')
 
-    dom_rows = ""
-    dom_cards = ""
-    for dom, members in sorted(dom_groups.items(),
-                               key=lambda kv: (-sum(_cscore(m["combined"]) for m in kv[1]) / len(kv[1]), kv[0])):
+    # precompute per-domain stats once (reused by the summary table + cards)
+    dom_stats = {}
+    for dom, members in dom_groups.items():
         n = len(members)
         avg = sum(_cscore(m["combined"]) for m in members) / n
         n_contested = sum(1 for m in members if (m["combined"] or "").upper() == "CONTESTED")
         ordered = sorted(members, key=lambda m: (-_cscore(m["combined"]), -priority_100(m)))
+        dom_stats[dom] = {"n": n, "avg": avg, "nc": n_contested, "ordered": ordered}
+
+    # summary table rows — sorted by tilt desc, with the bucket as the first column
+    dom_rows = ""
+    for dom in sorted(dom_groups, key=lambda d: (-dom_stats[d]["avg"], d)):
+        s = dom_stats[dom]; n, avg, n_contested, ordered = s["n"], s["avg"], s["nc"], s["ordered"]
+        b = bucket_for_domain(dom)
         chips = " ".join(_chip(m) for m in ordered)
         cls_tilt = "b-pos" if avg > 0.4 else "b-neg" if avg < -0.4 else "muted"
         tilt_lab = _tilt_label(avg, n_contested, n)
-        dom_rows += (f'<tr><td><b>{html.escape(dom)}</b></td>'
+        dom_rows += (f'<tr><td class="muted" data-s="{bucket_rank(b):02d}" style="white-space:nowrap">{html.escape(b)}</td>'
+                     f'<td><b>{html.escape(dom)}</b></td>'
                      f'<td class="num" data-s="{n}">{n}</td>'
                      f'<td>{chips}</td>'
                      f'<td data-s="{avg:.2f}"><span class="{cls_tilt}">{tilt_lab}</span> '
                      f'<span class="muted">({avg:+.1f})</span></td></tr>')
-        # per-domain dashboard card: how the AI-trend behaves + its companies
+
+    def _dom_card(dom):
+        s = dom_stats[dom]; n, avg, n_contested, ordered = s["n"], s["avg"], s["nc"], s["ordered"]
         note = DOMAIN_NOTE.get(dom, "")
-        avg_p = round(sum(priority_100(m) for m in members) / n)
-        dom_cards += (
-            f'<div class="domcard" data-domain="{html.escape(dom)}" data-tilt="{avg:.2f}">'
+        avg_p = round(sum(priority_100(m) for m in ordered) / n)
+        tilt_lab = _tilt_label(avg, n_contested, n)
+        b = bucket_for_domain(dom)
+        return (
+            f'<div class="domcard" data-domain="{html.escape(dom)}" data-bucket="{html.escape(b)}" data-tilt="{avg:.2f}">'
             f'<div class="domcard-head"><b>{html.escape(dom)}</b>'
             f'<span class="badge {cls_combined("CONVICTION ALIGNED" if avg>=1.5 else "ALIGNED" if avg>=0.5 else "EXPOSED" if avg<=-0.5 else "CONTESTED" if n_contested else "NEUTRAL")}">{tilt_lab}</span></div>'
             f'<div class="domcard-meta"><span class="muted">{n} name{"s" if n>1 else ""} · tilt {avg:+.1f} · avg priority {avg_p}</span></div>'
             f'<p class="domcard-read">{html.escape(note)}</p>'
             f'<ul class="domlist">{"".join(_dom_member_li(m) for m in ordered)}</ul>'
             f'</div>')
+
+    # cards grouped under bucket section headers (the generic category), domains
+    # within each bucket ordered by tilt desc
+    buckets_present = {}
+    for dom in dom_groups:
+        buckets_present.setdefault(bucket_for_domain(dom), []).append(dom)
+    dom_cards = ""
+    for b in sorted(buckets_present, key=bucket_rank):
+        doms = sorted(buckets_present[b], key=lambda d: (-dom_stats[d]["avg"], d))
+        nstocks = sum(dom_stats[d]["n"] for d in doms)
+        b_avg = sum(_cscore(m["combined"]) for d in doms for m in dom_stats[d]["ordered"]) / nstocks
+        cards = "".join(_dom_card(d) for d in doms)
+        dom_cards += (
+            f'<section class="bucketsec" data-bucket="{html.escape(b)}">'
+            f'<h3 class="buckethead">{html.escape(b)} '
+            f'<span class="muted">· {len(doms)} domain{"s" if len(doms)>1 else ""} · '
+            f'{nstocks} name{"s" if nstocks>1 else ""} · tilt {b_avg:+.1f}</span></h3>'
+            f'<div class="domcards">{cards}</div></section>')
 
     # ---- track-record cards ----
     res = [r for r in recs if r["status"] == "resolved" and r["alpha_n"] is not None]
@@ -671,12 +1045,14 @@ def main():
         leo = badge(r["leopold"], cls_brain(r["leopold"])) if r["leopold"] else "—"
         jor = badge(r["jordi"], cls_brain(r["jordi"])) if r["jordi"] else "—"
         gav = badge(r["gavin"], cls_brain(r["gavin"])) if r["gavin"] else "—"
+        xb = badge(r["x"], cls_x(r["x"])) if r["x"] else "—"
         base_b = badge(r["base_action"], cls_action(r["base_action"]))
         macro_b = badge(r["macro_action"], cls_action(r["macro_action"]))
         prio = priority_100(r); prio_raw = priority_raw(r)
         dom_cell = html.escape(AI_DOMAIN.get(r["ticker"], "—"))
+        bkt = bucket_for(r["ticker"])
         rows_html += (
-            f'<tr data-domain="{dom_cell}">'
+            f'<tr data-domain="{dom_cell}" data-bucket="{html.escape(bkt)}">'
             f'<td data-s="{r["date"]}">{r["date"]}</td>'
             f'<td><b>{tk}</b></td>'
             f'<td class="num" data-s="{prio_raw:.3f}"><span class="badge {cls_priority(prio)}">{prio}</span></td>'
@@ -689,7 +1065,9 @@ def main():
             f'<td>{leo}</td>'
             f'<td>{jor}</td>'
             f'<td>{gav}</td>'
+            f'<td>{xb}</td>'
             f'<td class="num {ocls}" data-s="{osort}">{outcome}</td>'
+            f'<td class="muted" data-s="{bucket_rank(bkt):02d}" style="white-space:nowrap">{html.escape(bkt)}</td>'
             f'</tr>')
 
     # ---- by-stock rollup: times analyzed + latest secular read ----
@@ -710,11 +1088,14 @@ def main():
         leo = badge(r["leopold"], cls_brain(r["leopold"])) if r["leopold"] else "—"
         jor = badge(r["jordi"], cls_brain(r["jordi"])) if r["jordi"] else "—"
         gav = badge(r["gavin"], cls_brain(r["gavin"])) if r["gavin"] else "—"
+        xb = badge(r["x"], cls_x(r["x"])) if r["x"] else "—"
         comb = badge(r["combined"], cls_combined(r["combined"])) if r["combined"] else "—"
         dom = html.escape(AI_DOMAIN.get(r["ticker"], "—"))
+        bkt = bucket_for(r["ticker"])
         stk_rows += (
-            f'<tr data-domain="{dom}">'
+            f'<tr data-domain="{dom}" data-bucket="{html.escape(bkt)}">'
             f'<td><b>{tk}</b></td>'
+            f'<td class="muted" data-s="{bucket_rank(bkt):02d}" style="white-space:nowrap">{html.escape(bkt)}</td>'
             f'<td class="muted" style="white-space:nowrap">{dom}</td>'
             f'<td class="num" data-s="{n}">{n}×</td>'
             f'<td data-s="{r["date"]}">{r["date"]}</td>'
@@ -724,6 +1105,7 @@ def main():
             f'<td>{leo}</td>'
             f'<td>{jor}</td>'
             f'<td>{gav}</td>'
+            f'<td>{xb}</td>'
             f'<td>{comb}</td>'
             f'</tr>')
 
@@ -755,10 +1137,27 @@ def main():
     cards += (f'<div class="card"><div class="k">Stance changes</div>'
               f'<div class="v">{changed}<small> of {len(multi)} multi-run names</small></div></div>')
 
-    # domain filter dropdown options (with per-domain counts) for the By-stock table
-    domain_options = f'<option value="">All domains ({len(L)})</option>'
-    for dom in sorted(dom_groups):
-        domain_options += f'<option value="{html.escape(dom)}">{html.escape(dom)} ({len(dom_groups[dom])})</option>'
+    # domain filter dropdown — grouped under bucket optgroups, each with an
+    # "All <bucket>" entry (value bucket:<name>) plus the specific domains within.
+    domain_options = f'<option value="">All buckets &amp; domains ({len(L)})</option>'
+    for b in sorted(buckets_present, key=bucket_rank):
+        doms = sorted(buckets_present[b])
+        nstocks = sum(len(dom_groups[d]) for d in doms)
+        domain_options += f'<optgroup label="{html.escape(b)}">'
+        domain_options += f'<option value="bucket:{html.escape(b)}">▸ All {html.escape(b)} ({nstocks})</option>'
+        for d in doms:
+            domain_options += f'<option value="{html.escape(d)}">{html.escape(d)} ({len(dom_groups[d])})</option>'
+        domain_options += '</optgroup>'
+
+    # ---- Research tab + weekly Changes diff ----
+    rx_cur = load_x_research(X_RESEARCH)
+    rx_prev = load_prev_research(rx_cur)
+    research_html = build_research(rx_cur, rx_prev)
+    changes_ev, changes_n = compute_changes(recs, by_ticker, rx_cur, rx_prev)
+    changes_html = build_changes(changes_ev, rx_prev)
+    changes_badge = (f'<span class="chgbadge">🔔 {changes_n} change{"s" if changes_n != 1 else ""}</span>'
+                     if changes_n else '')
+    changes_tab = f'🔔 Changes{f" ({changes_n})" if changes_n else ""}'
 
     itpl = open(os.path.join(TPL, "index.html"), encoding="utf-8").read()
     idx = itpl
@@ -766,7 +1165,9 @@ def main():
                  "{{TICKERS}}": str(len(latest)), "{{SUMMARY_CARDS}}": cards,
                  "{{DASHBOARDS}}": dashboards, "{{BY_STOCK}}": stk_rows,
                  "{{BY_DOMAIN}}": dom_rows, "{{DOMAIN_OPTIONS}}": domain_options,
-                 "{{DOMAIN_CARDS}}": dom_cards,
+                 "{{DOMAIN_CARDS}}": dom_cards, "{{RESEARCH}}": research_html,
+                 "{{CHANGES}}": changes_html, "{{CHANGES_BADGE}}": changes_badge,
+                 "{{CHANGES_TAB}}": changes_tab,
                  "{{TREND_INTRO}}": trend_intro, "{{TREND_CARDS}}": trend_cards,
                  "{{TABLE_ROWS}}": rows_html}.items():
         idx = idx.replace(k, v)
