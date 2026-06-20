@@ -1583,6 +1583,7 @@ def main():
             f'<td><b>{tk}</b></td>'
             f'<td class="num" data-s="{r["last_price_n"] if r["last_price_n"] is not None else (r["price_at_n"] or -1)}">{price_cell(r)}</td>'
             f'<td class="num" data-s="{prio_raw:.3f}"><span class="badge {cls_priority(prio)}">{prio}</span></td>'
+            f'<td data-s="{cv_s}" style="white-space:nowrap">{cv_cell}</td>'
             f'<td>{base_b}</td>'
             f'<td>{macro_b}</td>'
             f'<td class="num" data-s="{pb_sort}">{pb_disp}</td>'
@@ -1595,7 +1596,6 @@ def main():
             f'<td>{xb}</td>'
             f'<td class="num {ocls}" data-s="{osort}">{outcome}</td>'
             f'<td class="muted" data-s="{bucket_rank(bkt):02d}" style="white-space:nowrap">{html.escape(bkt)}</td>'
-            f'<td data-s="{cv_s}" style="white-space:nowrap">{cv_cell}</td>'
             f'</tr>')
 
     # ---- by-stock rollup: times analyzed + latest secular read ----
