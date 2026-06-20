@@ -18,9 +18,10 @@ import os, re, glob, html, json, datetime, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(ROOT, ".claude", "skills", "trading-analysis", "scripts"))
 try:
-    from ta_memory import fetch_returns
+    from ta_memory import fetch_returns, fetch_last_price
 except ImportError:
     fetch_returns = None
+    fetch_last_price = None
 
 TPL = os.path.join(ROOT, "scripts", "templates")
 OUT = os.path.join(ROOT, "dashboard")
@@ -44,6 +45,7 @@ def load_x_research(path):
 
 
 UNDER_PRESSURE = os.path.join(os.path.dirname(MEM), "under_pressure.json")
+METRICS = os.path.join(os.path.dirname(MEM), "metrics.json")
 
 
 def load_under_pressure(path):
@@ -51,6 +53,39 @@ def load_under_pressure(path):
     try:
         with open(path, encoding="utf-8") as f:
             return json.load(f)
+    except Exception:
+        return {}
+
+
+METRICS_HIST = os.path.join(os.path.dirname(MEM), "metrics_history")
+
+
+def load_metrics(path):
+    """fetch_metrics.py cache: {TICKER: {market_cap, forward_pe, …}} or {} if absent.
+
+    Network-free here — the fetcher does the yfinance work and writes this JSON;
+    the dashboard only reads it (offline → last cache)."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f).get("metrics", {})
+    except Exception:
+        return {}
+
+
+def load_prev_metrics(hist_dir=METRICS_HIST):
+    """Most recent dated metrics snapshot strictly older than today's — for the
+    week-over-week Financials-moves diff. {} if none yet (first run = baseline)."""
+    today = datetime.date.today().isoformat()
+    try:
+        snaps = sorted(f for f in os.listdir(hist_dir) if f.endswith(".json"))
+    except Exception:
+        return {}
+    older = [f for f in snaps if f[:10] < today]
+    if not older:
+        return {}
+    try:
+        with open(os.path.join(hist_dir, older[-1]), encoding="utf-8") as f:
+            return json.load(f).get("metrics", {})
     except Exception:
         return {}
 
@@ -163,6 +198,8 @@ def parse_decision(path):
     d["gavin"] = grab(r"Gavin Brain Verdict:\s*\**\s*([A-Za-z ]+?)\**\s*[(\-—\n]", md)
     d["x"] = grab(r"X Brain Verdict:\s*\**\s*([A-Za-z ]+?)\**\s*[(\-—\n]", md)
     d["combined"] = grab(r"Combined Strategic Verdict:\s*\**\s*([A-Z ]+?)\**\s*[(\-—\.\n]", md)
+    # price recorded at analysis time (entry reference) — "Price at analysis: $123.45 …"
+    d["price_at"] = grab(r"Price at analysis[:\s]*\**\s*\$?\s*([\d,]+(?:\.\d+)?)", md)
     d["forecast"] = parse_forecast(md)
     return d
 
@@ -433,6 +470,23 @@ def num(s):
     m = re.search(r"[+\-]?\d+(?:\.\d+)?", s or "")
     return float(m.group(0)) if m else None
 
+def fmt_price(v):
+    return f"${v:,.2f}" if isinstance(v, (int, float)) else "—"
+
+def price_cell(r):
+    """Latest price (live close) + % change since the analysis-date entry price."""
+    lp = r.get("last_price_n")
+    ep = r.get("price_at_n")
+    if lp is None:
+        return ('—' if ep is None else
+                f'<span class="muted" title="price at analysis ({r["date"]})">{fmt_price(ep)}</span>')
+    chg = ""
+    if ep:
+        pct = (lp / ep - 1.0) * 100
+        chg = (f' <span class="{"b-pos" if pct >= 0 else "b-neg"}" '
+               f'title="vs ${ep:,.2f} at analysis ({r["date"]})">{pct:+.1f}%</span>')
+    return f'<b>{fmt_price(lp)}</b>{chg}'
+
 def action_from_rating(r):
     c = cls_rating(r)
     return "BUY" if c == "b-buy" else "SELL" if c == "b-sell" else "HOLD"
@@ -583,6 +637,227 @@ def forecast_html(fc):
     th = "".join(f"<th>{c}</th>" for c in head)
     return f'<table><thead><tr>{th}</tr></thead><tbody>{rows}</tbody></table>'
 
+# ---------- Financials tab (yfinance metrics cache) --------------------------
+
+def _m_money(n):
+    """1.96e12 -> $1.96T ; 575e6 -> $575M."""
+    if n is None:
+        return "—"
+    a = abs(n)
+    for div, suf in ((1e12, "T"), (1e9, "B"), (1e6, "M"), (1e3, "K")):
+        if a >= div:
+            return f"${n/div:.2f}{suf}".replace(".00", "")
+    return f"${n:.0f}"
+
+
+def _m_pct(f, signed=False):
+    """0.476 -> 47.6% ; fraction in, percent out."""
+    if f is None:
+        return "—"
+    return f"{f*100:+.1f}%" if signed else f"{f*100:.1f}%"
+
+
+def _m_x(n, suffix="×"):
+    return f"{n:.1f}{suffix}" if n is not None else "—"
+
+
+def _m_cell(val, disp, num=True, cls=""):
+    """A <td> carrying data-s for the JS sorter (raw number, or text)."""
+    c = f' class="{cls}"' if cls else ""
+    if num:
+        s = "" if val is None else f"{val}"
+        return f'<td{c} data-s="{s if s else -1e9}">{disp}</td>'
+    return f'<td{c} data-s="{html.escape(str(val or ""))}">{disp}</td>'
+
+
+def _rule40_cls(v):
+    return "b-pos" if (v is not None and v >= 40) else ("b-neg" if v is not None else "")
+
+
+# Per-metric tooltips — what it is + how to read it (good ▲ / bad ▼). Shared by the
+# detail-page Key-metrics box and the Financials-tab headers.
+METRIC_TIP = {
+    "market_cap": "Total equity value (price × shares). Size, not quality — bigger = more established & liquid, smaller = more room to run but riskier.",
+    "price": "Latest price from the market-data feed (yfinance).",
+    "forward_pe": "Price ÷ next-12mo expected EPS. LOWER = cheaper. Rough read: <15 cheap · 15–30 fair · >40 expensive (priced for high growth). 'n/a' = no positive forward earnings.",
+    "peg": "Forward P/E ÷ expected growth. <1 = growth not fully priced in (GOOD value) · ~1–2 = fair · >2 = expensive vs its growth (CAUTION).",
+    "ev_sales": "Enterprise value ÷ revenue. LOWER = cheaper. <5 modest · >15 rich. Best valuation gauge for fast-growing or unprofitable names that have no P/E.",
+    "ev_ebitda": "Enterprise value ÷ EBITDA. LOWER = cheaper. <15 reasonable · >30 expensive. Negative = EBITDA-unprofitable (interpret with care).",
+    "fcf_yield": "Free cash flow ÷ market cap. HIGHER = more cash generated per $ invested (GOOD). Positive = self-funding · negative = cash-burning (BAD, relies on raising money).",
+    "gross_margin": "Revenue left after cost of goods. HIGHER = stronger pricing power / moat. >60% excellent · 30–60% solid · <30% commodity-like (BAD pricing power).",
+    "operating_margin": "Profit from core operations as % of revenue. HIGHER = more efficient. Negative = operating at a loss.",
+    "profit_margin": "Bottom-line net income as % of revenue. HIGHER = more profitable. Negative = losing money on a GAAP basis.",
+    "rev_growth": "Year-over-year revenue growth. HIGHER = faster-growing (GOOD). Negative = shrinking (BAD).",
+    "rule_of_40": "Revenue growth + FCF margin (software health rule). ≥40 = healthy growth/profit balance (GOOD, green) · <40 = paying too much growth for too little profit, or vice-versa.",
+    "beta": "Volatility vs the market. ~1 = moves with the market · >1.5 = high-beta (amplifies both gains AND losses, RISKIER) · <1 = defensive/calmer.",
+    "short_pct_float": "Shares sold short ÷ float. HIGHER = more bearish bets / squeeze potential. <5% normal · >10% heavily shorted (a two-edged RISK — crowded bearish but squeeze-prone).",
+    "avg_dollar_vol": "Average daily dollar volume traded. HIGHER = more liquid, easy to enter/exit (GOOD). Low = wide spreads, hard to exit a position (RISK).",
+    "dividend_yield": "Annual dividend ÷ price. Income return; growth names are often 0. Higher = more income but can signal lower growth — not good/bad on its own.",
+    "implied_upside": "Analyst mean target ÷ price − 1. POSITIVE = analysts see upside (GOOD) · large NEGATIVE = price already above targets (CAUTION, stretched).",
+    "pct_52w_range": "Where the price sits in its 1-year low→high band. ~100% = near highs (momentum, but extended) · ~0% = near lows (value, or a broken chart).",
+    "next_earnings": "Next scheduled earnings date — a known volatility catalyst. Size positions so a gap move around it is survivable.",
+}
+
+
+def metrics_box(m):
+    """Compact 'Key metrics' grid for a detail page (or '' if none cached)."""
+    if not m:
+        return ""
+    def vb(field, label, v, cls=""):
+        c = f' class="{cls}"' if cls else ""
+        tip = METRIC_TIP.get(field, "")
+        t = f' title="{html.escape(tip)}"' if tip else ""
+        cue = ' <span class="muted" style="cursor:help">ⓘ</span>' if tip else ""
+        return (f'<div class="vbox"{t}><div class="k">{label}{cue}</div>'
+                f'<div{c}>{v}</div></div>')
+    rows = [
+        vb("market_cap", "Market cap", _m_money(m.get("market_cap"))),
+        vb("forward_pe", "Forward P/E", _m_x(m.get("forward_pe"), "")),
+        vb("peg", "PEG", _m_x(m.get("peg"), "")),
+        vb("ev_sales", "EV / Sales", _m_x(m.get("ev_sales"))),
+        vb("ev_ebitda", "EV / EBITDA", _m_x(m.get("ev_ebitda"))),
+        vb("fcf_yield", "FCF yield", _m_pct(m.get("fcf_yield")),
+           "b-pos" if (m.get("fcf_yield") or 0) > 0 else "b-neg" if m.get("fcf_yield") is not None else ""),
+        vb("gross_margin", "Gross margin", _m_pct(m.get("gross_margin"))),
+        vb("rev_growth", "Rev growth (YoY)", _m_pct(m.get("rev_growth"), signed=True)),
+        vb("rule_of_40", "Rule of 40", (f'{m["rule_of_40"]:.0f}' if m.get("rule_of_40") is not None else "—"),
+           _rule40_cls(m.get("rule_of_40"))),
+        vb("beta", "Beta", _m_x(m.get("beta"), "")),
+        vb("short_pct_float", "Short % float", _m_pct(m.get("short_pct_float"))),
+        vb("avg_dollar_vol", "Avg $ vol", _m_money(m.get("avg_dollar_vol"))),
+        vb("implied_upside", "Analyst upside", _m_pct(m.get("implied_upside"), signed=True),
+           "b-pos" if (m.get("implied_upside") or 0) > 0 else "b-neg" if m.get("implied_upside") is not None else ""),
+        vb("dividend_yield", "Div yield", (_m_pct((m.get("dividend_yield") or 0)/100) if m.get("dividend_yield") else "—")),
+        vb("next_earnings", "Next earnings", m.get("next_earnings", "—")),
+    ]
+    fa = m.get("fetched_at", "")
+    note = f'<p class="sub" style="margin:6px 0 0">Market data via yfinance · fetched {fa}.</p>' if fa else ""
+    return ('<h2>Key metrics <span class="muted" style="text-transform:none;font-weight:400">'
+            '· valuation, profitability, balance-sheet &amp; liquidity</span></h2>'
+            f'<div class="verdict-grid">{"".join(rows)}</div>{note}')
+
+
+def build_financials(metrics, latest):
+    """Sortable financial-metrics table over the latest decision per ticker."""
+    if not metrics:
+        return ('<p class="muted">No metrics cached yet. Generate them with '
+                '<code>python3 scripts/fetch_metrics.py</code> (network; writes '
+                '<code>metrics.json</code> next to the decision log), then rebuild.</p>')
+    cols = [
+        ("Ticker", False, None), ("Mkt cap", True, "market_cap"), ("Price", True, "price"),
+        ("Fwd P/E", True, "forward_pe"), ("PEG", True, "peg"), ("EV/Sales", True, "ev_sales"),
+        ("EV/EBITDA", True, "ev_ebitda"), ("FCF yld", True, "fcf_yield"),
+        ("Gross marg", True, "gross_margin"), ("Rev gr", True, "rev_growth"),
+        ("Rule40", True, "rule_of_40"), ("Beta", True, "beta"),
+        ("Short%", True, "short_pct_float"), ("Avg $vol", True, "avg_dollar_vol"),
+        ("Div yld", True, "dividend_yield"), ("52w range", True, "pct_52w_range"),
+        ("Upside", True, "implied_upside"), ("Next ER", False, "next_earnings"),
+    ]
+    def _th(i, name, num, field):
+        tip = METRIC_TIP.get(field, "")
+        t = f' title="{html.escape(tip)}"' if tip else ""
+        cue = " ⓘ" if tip else ""
+        return f'<th onclick="sortBy({i},this{",1" if num else ""})"{t}>{html.escape(name)}{cue}</th>'
+    th = "".join(_th(i, name, num, field) for i, (name, num, field) in enumerate(cols))
+    rows = []
+    for tk in sorted(latest):
+        m = metrics.get(tk)
+        page = latest[tk].get("page")
+        tklink = f'<a href="{page}">{tk}</a>' if page else tk
+        if not m:
+            rows.append(f'<tr><td data-s="{tk}">{tklink}</td>'
+                        + '<td data-s="-1e9" class="muted" colspan="17">—</td></tr>')
+            continue
+        rng = m.get("pct_52w_range")
+        rng_disp = (f'{rng*100:.0f}%' if rng is not None else "—")
+        cells = [
+            f'<td data-s="{tk}">{tklink}</td>',
+            _m_cell(m.get("market_cap"), _m_money(m.get("market_cap"))),
+            _m_cell(m.get("price"), f'${m["price"]:.2f}' if m.get("price") else "—"),
+            _m_cell(m.get("forward_pe"), _m_x(m.get("forward_pe"), "")),
+            _m_cell(m.get("peg"), _m_x(m.get("peg"), "")),
+            _m_cell(m.get("ev_sales"), _m_x(m.get("ev_sales"))),
+            _m_cell(m.get("ev_ebitda"), _m_x(m.get("ev_ebitda"))),
+            _m_cell(m.get("fcf_yield"), _m_pct(m.get("fcf_yield")),
+                    cls="b-pos" if (m.get("fcf_yield") or 0) > 0 else "b-neg" if m.get("fcf_yield") is not None else ""),
+            _m_cell(m.get("gross_margin"), _m_pct(m.get("gross_margin"))),
+            _m_cell(m.get("rev_growth"), _m_pct(m.get("rev_growth"), signed=True)),
+            _m_cell(m.get("rule_of_40"), (f'{m["rule_of_40"]:.0f}' if m.get("rule_of_40") is not None else "—"),
+                    cls=_rule40_cls(m.get("rule_of_40"))),
+            _m_cell(m.get("beta"), _m_x(m.get("beta"), "")),
+            _m_cell(m.get("short_pct_float"), _m_pct(m.get("short_pct_float"))),
+            _m_cell(m.get("avg_dollar_vol"), _m_money(m.get("avg_dollar_vol"))),
+            _m_cell(m.get("dividend_yield"), (_m_pct((m.get("dividend_yield") or 0)/100) if m.get("dividend_yield") else "—")),
+            _m_cell(rng, rng_disp),
+            _m_cell(m.get("implied_upside"), _m_pct(m.get("implied_upside"), signed=True),
+                    cls="b-pos" if (m.get("implied_upside") or 0) > 0 else "b-neg" if m.get("implied_upside") is not None else ""),
+            _m_cell(m.get("next_earnings", ""), m.get("next_earnings", "—"), num=False),
+        ]
+        rows.append("<tr>" + "".join(cells) + "</tr>")
+    n_cov = sum(1 for tk in latest if metrics.get(tk))
+    intro = (f'<p class="sub" style="margin:-4px 0 10px">{n_cov} of {len(latest)} names have cached '
+             'metrics · click any header to re-sort · ticker → full decision. '
+             '<b>Rule40</b> = rev-growth + FCF-margin (software health, ≥40 green); '
+             '<b>FCF yld</b> = free cash flow ÷ market cap; <b>EV/Sales</b> &amp; '
+             '<b>EV/EBITDA</b> are enterprise-value multiples; <b>Short%</b> = short interest '
+             'as % of float; <b>52w range</b> = where price sits in its 1-yr band.</p>')
+    return (intro + '<div style="overflow-x:auto"><table id="fin"><thead><tr>' + th
+            + '</tr></thead><tbody>' + "".join(rows) + '</tbody></table></div>')
+
+
+def build_metric_moves(cur, prev, latest):
+    """Week-over-week financial-metric diff for the Changes tab. Returns (html, count).
+
+    Diffs the current metrics.json against the most recent older snapshot
+    (metrics_history/). Surfaces valuation re-rating (forward P/E, EV/Sales),
+    short-interest spikes, FCF-yield shifts, and analyst-upside changes — only when
+    the move clears a noise threshold. First run (no prior snapshot) = baseline note."""
+    title = ('<h2>📐 Financials moves <span class="muted" style="font-weight:400;'
+             'text-transform:none">· valuation re-rating, short-interest &amp; FCF-yield '
+             'shifts vs. the previous metrics snapshot</span></h2>')
+    if not prev:
+        return (title + '<p class="muted">Baseline metrics snapshot saved — valuation / '
+                'short-interest moves will appear here after the next refresh.</p>', 0)
+
+    arrow = {"up": '<span class="muted">▲</span>', "down": '<span class="muted">▼</span>'}
+    # (field, label, getter, formatter, abs-threshold, rel-threshold, want-abs-points)
+    def fp(v):  # forward P/E style
+        return _m_x(v, "")
+    specs = [
+        ("forward_pe", "Fwd P/E", fp, 1.5, 0.12),
+        ("ev_sales", "EV/Sales", lambda v: _m_x(v), 0.6, 0.15),
+        ("short_pct_float", "Short % float", lambda v: _m_pct(v), 0.02, None),
+        ("fcf_yield", "FCF yield", lambda v: _m_pct(v), 0.01, None),
+        ("implied_upside", "Analyst upside", lambda v: _m_pct(v, signed=True), 0.05, None),
+    ]
+    events = []
+    for tk in sorted(latest):
+        c, p = cur.get(tk), prev.get(tk)
+        if not c or not p:
+            continue
+        for field, label, fmt, abs_thr, rel_thr in specs:
+            a, b = p.get(field), c.get(field)
+            if a is None or b is None:
+                continue
+            d = b - a
+            if abs(d) < abs_thr:
+                continue
+            if rel_thr is not None and abs(a) > 1e-9 and abs(d) / abs(a) < rel_thr:
+                continue
+            events.append({"tk": tk, "label": label, "old": fmt(a), "new": fmt(b),
+                           "dir": "up" if d > 0 else "down", "mag": abs(d) / (abs(a) + 1e-9)})
+    if not events:
+        return (title + '<p class="muted">No material valuation / short-interest moves vs. the '
+                'previous snapshot.</p>', 0)
+    events.sort(key=lambda e: e["mag"], reverse=True)
+    rows = "".join(
+        f'<li><b>{e["tk"]}</b> <span class="cf">{e["label"]}</span> '
+        f'{html.escape(e["old"])} → {html.escape(e["new"])} {arrow[e["dir"]]}</li>'
+        for e in events)
+    head = title.replace('📐 Financials moves <span', f'📐 Financials moves <span class="muted">({len(events)})</span> <span')
+    return (head + f'<ul class="chg">{rows}</ul>', len(events))
+
+
 # ---------- Research tab (X-brain trends + bullish names) --------------------
 
 def _x_lean_cls(lean):
@@ -648,14 +923,14 @@ def build_research(rx, rx_prev=None):
             f'</tr>')
     bullish_html = (
         '<table id="xbull"><thead><tr>'
-        '<th onclick="sortBy(0,this)">Ticker</th>'
-        '<th onclick="sortBy(1,this,1)">Buzz (mentions)</th>'
-        '<th onclick="sortBy(2,this)">Lean</th>'
-        '<th onclick="sortBy(3,this,1)">Bull words</th>'
-        '<th onclick="sortBy(4,this,1)">Bear words</th>'
-        '<th onclick="sortBy(5,this,1)">Net</th>'
-        '<th onclick="sortBy(6,this,1)">Bull ratio</th>'
-        '<th onclick="sortBy(7,this)">Latest</th>'
+        '<th onclick="sortBy(0,this)" title="Stock symbol — click to open live X chatter for its $cashtag.">Ticker</th>'
+        '<th onclick="sortBy(1,this,1)" title="How many posts in the corpus mention this name — raw attention/buzz volume.">Buzz (mentions)</th>'
+        '<th onclick="sortBy(2,this)" title="Net crowd lean from the bull-vs-bear lexicon: Bullish, Bearish, or neutral.">Lean</th>'
+        '<th onclick="sortBy(3,this,1)" title="Count of bullish lexicon hits in posts about this name.">Bull words</th>'
+        '<th onclick="sortBy(4,this,1)" title="Count of bearish lexicon hits in posts about this name.">Bear words</th>'
+        '<th onclick="sortBy(5,this,1)" title="Bull words minus bear words — the signed sentiment balance.">Net</th>'
+        '<th onclick="sortBy(6,this,1)" title="Bull words ÷ bear words — how lopsided the chatter is (higher = more one-sidedly bullish).">Bull ratio</th>'
+        '<th onclick="sortBy(7,this)" title="Date of the most recent post about this name in the corpus.">Latest</th>'
         f'</tr></thead><tbody>{brows}</tbody></table>') if brows else \
         '<p class="muted">No per-name sentiment in the corpus yet.</p>'
 
@@ -866,6 +1141,7 @@ def build_under_pressure(up):
 def main():
     os.makedirs(OUT, exist_ok=True)
     mem = parse_memory(MEM)
+    metrics = load_metrics(METRICS)
     decisions = {}
     for p in glob.glob(os.path.join(STOCKS, "*", "*_decision.md")):
         d = parse_decision(p)
@@ -879,7 +1155,7 @@ def main():
                                        "src": "", "forecast": {}, "verdict_new": "",
                                        "jensen": "", "leopold": "", "jordi": "", "gavin": "", "x": "", "combined": "",
                                        "base_action": "", "base_rating": "",
-                                       "macro_action": "", "macro_rating": ""})
+                                       "macro_action": "", "macro_rating": "", "price_at": ""})
         m = mem.get((date, tk), {})
         rating = d.get("base_rating") or m.get("rating", "")
         base_action = d.get("base_action") or action_from_rating(rating)
@@ -894,6 +1170,9 @@ def main():
         raw_val = m.get("raw", "")
         alpha_val = m.get("alpha", "")
         holding_val = m.get("holding", "")
+        # price at analysis (entry reference) recorded in the decision file, if any
+        price_at_n = num(d.get("price_at", ""))
+        last_price_n = None  # latest live close (most recent trading day)
 
         if status == "pending" and fetch_returns:
             try:
@@ -904,6 +1183,10 @@ def main():
                         raw_val = f"{r_res.raw:+.1%}"
                         alpha_val = f"{r_res.alpha:+.1%}"
                         holding_val = f"{r_res.elapsed_days}d (Live)"
+                        if r_res.last_price is not None:
+                            last_price_n = r_res.last_price
+                        if price_at_n is None and r_res.entry_price is not None:
+                            price_at_n = r_res.entry_price  # backfill entry from prices
             except Exception:
                 pass
 
@@ -914,6 +1197,7 @@ def main():
                      "alpha": alpha_val, "holding": holding_val,
                      "prob": prob, "horizon": m.get("horizon", "") or "24mo",
                      "exp24": exp24, "target24": fc24.get("target", ""),
+                     "price_at_n": price_at_n, "last_price_n": last_price_n,
                      "pbeat_n": num(prob), "exp24_n": num(exp24), "alpha_n": num(alpha_val)})
     recs.sort(key=lambda r: (r["date"], r["ticker"]), reverse=True)
 
@@ -949,6 +1233,26 @@ def main():
                 f'This trend is a consistency check on the call below — it does not override the forecast.</p>'
                 f'</div>')
 
+    # ---- latest decision per ticker (computed before pages so they can show the live price) ----
+    latest = {}
+    for r in recs:
+        if r["ticker"] not in latest:  # recs already sorted date desc
+            latest[r["ticker"]] = r
+    L = list(latest.values())
+
+    # Backfill a live latest price for the headline (latest-per-ticker) rows that
+    # didn't get one from fetch_returns (e.g. resolved calls, or analyses too recent
+    # to have a 2nd trading row yet, skip that path).
+    if fetch_last_price:
+        for r in latest.values():
+            if r.get("last_price_n") is None:
+                try:
+                    lp = fetch_last_price(r["ticker"])
+                    if lp is not None:
+                        r["last_price_n"] = lp
+                except Exception:
+                    pass
+
     # per-decision pages (only where we have the markdown body)
     dtpl = open(os.path.join(TPL, "decision.html"), encoding="utf-8").read()
     for r in recs:
@@ -968,6 +1272,7 @@ def main():
             "{{BASE_CLS}}": cls_action(r["base_action"]), "{{MACRO_CLS}}": cls_action(r["macro_action"]),
             "{{PBEAT}}": pb, "{{EXP24}}": r["exp24"] or "—",
             "{{EXP_CLS}}": ("b-pos" if (r["exp24_n"] or 0) > 0 else "b-neg" if r["exp24_n"] is not None else ""),
+            "{{PRICE}}": price_cell(r),
             "{{DOMAIN}}": AI_DOMAIN.get(r["ticker"], "—"),
             "{{JENSEN}}": r["jensen"] or "n/a", "{{JENSEN_CLS}}": cls_brain(r["jensen"]),
             "{{LEOPOLD}}": r["leopold"] or "n/a", "{{LEOPOLD_CLS}}": cls_brain(r["leopold"]),
@@ -977,6 +1282,7 @@ def main():
             "{{COMBINED}}": r["combined"] or "n/a", "{{COMBINED_CLS}}": cls_combined(r["combined"]),
             "{{VERDICT_NEW}}": inline(r["verdict_new"]) if r["verdict_new"] else '<span class="muted">—</span>',
             "{{FORECAST_TABLE}}": forecast_html(r["forecast"]),
+            "{{METRICS_BOX}}": metrics_box(metrics.get(r["ticker"])),
             "{{TREND}}": trend_block(r["ticker"]),
             "{{BODY}}": md_to_html(r["md"]),
             "{{SRCPATH}}": r["src"], "{{GENERATED}}": NOW,
@@ -984,13 +1290,6 @@ def main():
         for k, v in repl.items():
             page = page.replace(k, v)
         open(os.path.join(OUT, r["page"]), "w", encoding="utf-8").write(page)
-
-    # ---- dashboards (latest decision per ticker) ----
-    latest = {}
-    for r in recs:
-        if r["ticker"] not in latest:  # recs already sorted date desc
-            latest[r["ticker"]] = r
-    L = list(latest.values())
 
     def li(r, metric):
         tk = (f'<a href="{r["page"]}">{r["ticker"]}</a>' if r.get("page") else r["ticker"])
@@ -1164,10 +1463,33 @@ def main():
         prio = priority_100(r); prio_raw = priority_raw(r)
         dom_cell = html.escape(AI_DOMAIN.get(r["ticker"], "—"))
         bkt = bucket_for(r["ticker"])
+        prio_word = ("high-conviction long" if prio >= 60 else
+                     "avoid / short" if prio <= 40 else "neutral")
+        dom_full = AI_DOMAIN.get(r["ticker"], "—")
+        name_part = (" — " + r["name"]) if r.get("name") else ""
+        exp_part = (" · expected 24mo " + r["exp24"]) if r.get("exp24") else ""
+        if r["last_price_n"] is not None:
+            price_part = f'Latest ${r["last_price_n"]:,.2f}'
+            if r["price_at_n"]:
+                price_part += f' (vs ${r["price_at_n"]:,.2f} at analysis, {(r["last_price_n"]/r["price_at_n"]-1)*100:+.1f}%)'
+            price_part += '. '
+        elif r["price_at_n"]:
+            price_part = f'Price at analysis ${r["price_at_n"]:,.2f}. '
+        else:
+            price_part = ''
+        row_tip = html.escape(
+            f'{r["ticker"]}{name_part} · {dom_full} · analyzed {r["date"]}. '
+            f'{price_part}'
+            f'Call: Base {r["base_action"] or "—"} / Macro {r["macro_action"] or "—"}. '
+            f'P(beat benchmark) {pb_disp}{exp_part}. '
+            f'Secular fit (4 lenses fused): {r["combined"] or "n/a"}. '
+            f'Priority {prio}/100 — {prio_word}. '
+            f'Hover a column header for what each field means.')
         rows_html += (
-            f'<tr data-domain="{dom_cell}" data-bucket="{html.escape(bkt)}">'
+            f'<tr title="{row_tip}" data-domain="{dom_cell}" data-bucket="{html.escape(bkt)}">'
             f'<td data-s="{r["date"]}">{r["date"]}</td>'
             f'<td><b>{tk}</b></td>'
+            f'<td class="num" data-s="{r["last_price_n"] if r["last_price_n"] is not None else (r["price_at_n"] or -1)}">{price_cell(r)}</td>'
             f'<td class="num" data-s="{prio_raw:.3f}"><span class="badge {cls_priority(prio)}">{prio}</span></td>'
             f'<td>{base_b}</td>'
             f'<td>{macro_b}</td>'
@@ -1205,8 +1527,15 @@ def main():
         comb = badge(r["combined"], cls_combined(r["combined"])) if r["combined"] else "—"
         dom = html.escape(AI_DOMAIN.get(r["ticker"], "—"))
         bkt = bucket_for(r["ticker"])
+        stk_name_part = (" — " + r["name"]) if r.get("name") else ""
+        stk_rating_part = (" (" + r["rating"] + ")") if r.get("rating") else ""
+        stk_tip = html.escape(
+            f'{r["ticker"]}{stk_name_part} · {AI_DOMAIN.get(r["ticker"], "—")}. '
+            f'Analyzed {n}× · latest {r["date"]}: {r["base_action"] or "—"}{stk_rating_part}. '
+            f'P(beat) {pb_disp} · combined {r["combined"] or "n/a"}. '
+            f'Hover a column header for what each field means.')
         stk_rows += (
-            f'<tr data-domain="{dom}" data-bucket="{html.escape(bkt)}">'
+            f'<tr title="{stk_tip}" data-domain="{dom}" data-bucket="{html.escape(bkt)}">'
             f'<td><b>{tk}</b></td>'
             f'<td class="muted" data-s="{bucket_rank(bkt):02d}" style="white-space:nowrap">{html.escape(bkt)}</td>'
             f'<td class="muted" style="white-space:nowrap">{dom}</td>'
@@ -1265,13 +1594,18 @@ def main():
             domain_options += f'<option value="{html.escape(d)}">{html.escape(d)} ({len(dom_groups[d])})</option>'
         domain_options += '</optgroup>'
 
+    # ---- Financials tab (cached yfinance metrics) ----
+    financials_html = build_financials(metrics, latest)
+
     # ---- Research tab + weekly Changes diff ----
     rx_cur = load_x_research(X_RESEARCH)
     rx_prev = load_prev_research(rx_cur)
     research_html = build_research(rx_cur, rx_prev)
     changes_ev, changes_n = compute_changes(recs, by_ticker, rx_cur, rx_prev)
     up_html, up_n = build_under_pressure(load_under_pressure(UNDER_PRESSURE))
-    changes_html = up_html + build_changes(changes_ev, rx_prev)
+    moves_html, moves_n = build_metric_moves(metrics, load_prev_metrics(), latest)
+    changes_n += moves_n
+    changes_html = up_html + build_changes(changes_ev, rx_prev) + moves_html
     reversals_html, reversals_n = build_reversals(changes_ev)
     badges = ''
     if up_n:
@@ -1291,6 +1625,7 @@ def main():
                  "{{DASHBOARDS}}": dashboards, "{{BY_STOCK}}": stk_rows,
                  "{{BY_DOMAIN}}": dom_rows, "{{DOMAIN_OPTIONS}}": domain_options,
                  "{{DOMAIN_CARDS}}": dom_cards, "{{RESEARCH}}": research_html,
+                 "{{FINANCIALS}}": financials_html,
                  "{{CHANGES}}": changes_html, "{{CHANGES_BADGE}}": changes_badge,
                  "{{CHANGES_TAB}}": changes_tab, "{{REVERSALS}}": reversals_html,
                  "{{REVERSALS_TAB}}": reversals_tab,

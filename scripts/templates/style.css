@@ -58,6 +58,9 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
 th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
 th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--bg)}
 th:hover{color:var(--txt)}
+/* hint that a header carries an explanation tooltip on hover */
+th[title]{text-decoration:underline dotted var(--border);text-underline-offset:3px}
+th[title]:hover{text-decoration-color:var(--accent)}
 tr:hover td{background:var(--panel)}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
 .controls{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap}

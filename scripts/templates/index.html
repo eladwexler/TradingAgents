@@ -114,6 +114,7 @@
     <button class="tabbtn" onclick="showTab('tab-domains',this)">🧩 AI-trend domains</button>
     <button class="tabbtn" onclick="showTab('tab-trends',this)">📈 Decision trends</button>
     <button class="tabbtn" onclick="showTab('tab-verdicts',this)">📋 All verdicts</button>
+    <button class="tabbtn" onclick="showTab('tab-financials',this)">📐 Financials</button>
     <button class="tabbtn" onclick="showTab('tab-research',this)">🔬 Research (X)</button>
     <button class="tabbtn" onclick="showTab('tab-reversals',this)">{{REVERSALS_TAB}}</button>
     <button class="tabbtn" onclick="showTab('tab-changes',this)">{{CHANGES_TAB}}</button>
@@ -154,11 +155,11 @@
   <p class="sub" style="margin:-4px 0 10px">Tilt = mean combined-verdict score across the layer's latest verdicts (CONVICTION ALIGNED +2 · ALIGNED +1 · NEUTRAL/CONTESTED 0 · EXPOSED −1 · OFFSIDE −2). Layers flagged <i>contested</i> are where the lenses disagree (Leopold build-out tailwind vs Jordi ROIC caution).</p>
   <table id="dom">
     <thead><tr>
-      <th onclick="sortBy(0,this)">Bucket</th>
-      <th onclick="sortBy(1,this)">AI build-out domain</th>
-      <th onclick="sortBy(2,this,1)">Names</th>
-      <th onclick="sortBy(3,this)">Tickers <span class="muted">(by combined verdict)</span></th>
-      <th onclick="sortBy(4,this,1)">Tilt</th>
+      <th onclick="sortBy(0,this)" title="Generic category grouping the fine-grained domains (compute, networking, power…).">Bucket</th>
+      <th onclick="sortBy(1,this)" title="The specific layer of the AI build-out these names sit in.">AI build-out domain</th>
+      <th onclick="sortBy(2,this,1)" title="How many analyzed names sit in this domain.">Names</th>
+      <th onclick="sortBy(3,this)" title="The names in this domain, each badge colored by its combined verdict. Click a ticker to open its decision page.">Tickers <span class="muted">(by combined verdict)</span></th>
+      <th onclick="sortBy(4,this,1)" title="Mean combined-verdict score across the layer's latest verdicts (CONVICTION ALIGNED +2 · ALIGNED +1 · NEUTRAL/CONTESTED 0 · EXPOSED −1 · OFFSIDE −2). Positive = secular tailwind.">Tilt</th>
     </tr></thead>
     <tbody>{{BY_DOMAIN}}</tbody>
   </table>
@@ -166,19 +167,19 @@
   <h2>By stock <span class="muted" style="text-transform:none;font-weight:400">· times analyzed + latest secular read · (follows the domain filter above)</span></h2>
   <table id="stk">
     <thead><tr>
-      <th onclick="sortBy(0,this)">Ticker</th>
-      <th onclick="sortBy(1,this)">Bucket</th>
-      <th onclick="sortBy(2,this)">AI build-out domain</th>
-      <th onclick="sortBy(3,this,1)">Analyses</th>
-      <th onclick="sortBy(4,this)">Latest</th>
-      <th onclick="sortBy(5,this)">Latest call</th>
-      <th onclick="sortBy(6,this,1)">P(beat)</th>
-      <th onclick="sortBy(7,this)">Jensen</th>
-      <th onclick="sortBy(8,this)">Leopold</th>
-      <th onclick="sortBy(9,this)">Jordi</th>
-      <th onclick="sortBy(10,this)">Gavin</th>
-      <th onclick="sortBy(11,this)">X</th>
-      <th onclick="sortBy(12,this)">Combined</th>
+      <th onclick="sortBy(0,this)" title="Stock symbol — click to open its full decision page.">Ticker</th>
+      <th onclick="sortBy(1,this)" title="The generic AI-build-out category this name rolls up into.">Bucket</th>
+      <th onclick="sortBy(2,this)" title="The specific layer of the AI build-out this name sits in.">AI build-out domain</th>
+      <th onclick="sortBy(3,this,1)" title="How many times this stock has been run through the tool.">Analyses</th>
+      <th onclick="sortBy(4,this)" title="Date of the most recent analysis.">Latest</th>
+      <th onclick="sortBy(5,this)" title="The latest Buy/Hold/Sell call (base action) and its rating.">Latest call</th>
+      <th onclick="sortBy(6,this,1)" title="Latest model probability (0–1) the stock beats its benchmark. 0.50 = coin-flip; above ~0.60 is a real edge.">P(beat)</th>
+      <th onclick="sortBy(7,this)" title="Jensen Brain — would Jensen Huang / NVIDIA strategically back this company?">Jensen</th>
+      <th onclick="sortBy(8,this)" title="Leopold Brain — does it fit Leopold Aschenbrenner's AGI-build-out thesis (compute, power, chips)?">Leopold</th>
+      <th onclick="sortBy(9,this)" title="Jordi Brain — does it sit with Jordi Visser's macro / AI-capex thesis vs his creative-destruction casualties?">Jordi</th>
+      <th onclick="sortBy(10,this)" title="Gavin Brain — would Gavin Baker back it as an AI winner: is AI sustaining or disruptive to its moat?">Gavin</th>
+      <th onclick="sortBy(11,this)" title="X Brain — X/Twitter FinTwit crowd sentiment + trend buzz (keyless). Not part of the Combined verdict.">X</th>
+      <th onclick="sortBy(12,this)" title="The four secular lenses fused: CONVICTION ALIGNED → ALIGNED → NEUTRAL → CONTESTED → EXPOSED → OFFSIDE.">Combined</th>
     </tr></thead>
     <tbody>{{BY_STOCK}}</tbody>
   </table>
@@ -193,24 +194,30 @@
   </div>
   <table id="tbl">
     <thead><tr>
-      <th onclick="sortBy(0,this)">Date</th>
-      <th onclick="sortBy(1,this)">Ticker</th>
-      <th onclick="sortBy(2,this,1)">Priority</th>
-      <th onclick="sortBy(3,this)">Base</th>
-      <th onclick="sortBy(4,this)">Macro</th>
-      <th onclick="sortBy(5,this,1)">P(beat)</th>
-      <th onclick="sortBy(6,this,1)">Exp 24mo</th>
-      <th onclick="sortBy(7,this)">Combined</th>
-      <th onclick="sortBy(8,this)">Jensen</th>
-      <th onclick="sortBy(9,this)">Leopold</th>
-      <th onclick="sortBy(10,this)">Jordi</th>
-      <th onclick="sortBy(11,this)">Gavin</th>
-      <th onclick="sortBy(12,this)">X</th>
-      <th onclick="sortBy(13,this,1)">Outcome</th>
-      <th onclick="sortBy(14,this)">Bucket</th>
+      <th onclick="sortBy(0,this)" title="When this analysis was run (the run date). Click to sort.">Date</th>
+      <th onclick="sortBy(1,this)" title="Stock symbol — click the ticker in a row to open its full decision page.">Ticker</th>
+      <th onclick="sortBy(2,this,1)" title="Latest price — most recent live close, with the % change since the price at analysis (hover for the entry price &amp; date). Live for open calls.">Price</th>
+      <th onclick="sortBy(3,this,1)" title="Actionability score 0–100 = conviction (rating) + P(beat) edge + expected 24mo return + secular tilt. 50 = neutral · ≥60 high-conviction long · ≤40 avoid/short.">Priority</th>
+      <th onclick="sortBy(4,this)" title="Base call — the Buy/Hold/Sell from the company's own fundamentals (bottom-up).">Base</th>
+      <th onclick="sortBy(5,this)" title="Macro call — the same call after adjusting for where we are in the AI-spending cycle (top-down reality check). More cautious than Base = the cycle is the reason.">Macro</th>
+      <th onclick="sortBy(6,this,1)" title="Model's probability (0–1) the stock beats its benchmark (US → S&amp;P 500) over the horizon. 0.50 = coin-flip; above ~0.60 is a real edge.">P(beat)</th>
+      <th onclick="sortBy(7,this,1)" title="Probability-weighted total return (price + dividends) over 24 months, blending the bear/base/bull cases.">Exp 24mo</th>
+      <th onclick="sortBy(8,this)" title="The four secular lenses fused (−4..+4): CONVICTION ALIGNED → ALIGNED → NEUTRAL → CONTESTED → EXPOSED → OFFSIDE. Flags the secular tailwind; does NOT change the Buy/Hold/Sell call.">Combined</th>
+      <th onclick="sortBy(9,this)" title="Jensen Brain — would Jensen Huang / NVIDIA strategically back this company (does it sit with NVIDIA's platform)?">Jensen</th>
+      <th onclick="sortBy(10,this)" title="Leopold Brain — does it fit Leopold Aschenbrenner's AGI-build-out thesis (compute, power/grid, chips)?">Leopold</th>
+      <th onclick="sortBy(11,this)" title="Jordi Brain — does it sit with Jordi Visser's macro / AI-capex thesis (compute scarcity, power, bitcoin, physical AI) vs his creative-destruction casualties?">Jordi</th>
+      <th onclick="sortBy(12,this)" title="Gavin Brain — would Gavin Baker back it as an AI winner: is AI sustaining (strengthens the moat) or disruptive (erodes it)?">Gavin</th>
+      <th onclick="sortBy(13,this)" title="X Brain — X/Twitter FinTwit crowd sentiment + trend buzz (keyless). A noisy overlay, the latest signal — NOT part of the Combined verdict.">X</th>
+      <th onclick="sortBy(14,this,1)" title="Pending calls show P(beat); resolved/live calls show realized alpha (return above the benchmark) once the horizon matures.">Outcome</th>
+      <th onclick="sortBy(15,this)" title="The generic AI-build-out category this name rolls up into (compute, networking, power…). See the AI-trend domains tab for detail.">Bucket</th>
     </tr></thead>
     <tbody>{{TABLE_ROWS}}</tbody>
   </table>
+  </section>
+
+  <section class="tabpanel" id="tab-financials">
+  <h2>Financials <span class="muted" style="text-transform:none;font-weight:400">· valuation, profitability, balance-sheet &amp; liquidity per name — sortable (market data via yfinance)</span></h2>
+  {{FINANCIALS}}
   </section>
 
   <section class="tabpanel" id="tab-research">
@@ -273,9 +280,9 @@ function sortBy(i,th,num){var tbl=th.closest('table');var key=tbl.id+'_'+i;
     return x<y?-d:x>y?d:0;});
   rows.forEach(function(r){tb.appendChild(r);});}
 
-// default view: All verdicts sorted by Priority (col 2) descending
-(function(){var pth=document.querySelector('#tbl thead th:nth-child(3)');
-  if(pth){dir['tbl_2']=true;sortBy(2,pth,1);}})();
+// default view: All verdicts sorted by Priority (col 3) descending
+(function(){var pth=document.querySelector('#tbl thead th:nth-child(4)');
+  if(pth){dir['tbl_3']=true;sortBy(3,pth,1);}})();
 filt();
 filtTrend(document.querySelector('#trendfilter .tf'));
 filtDom();

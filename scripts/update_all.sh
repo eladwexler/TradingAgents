@@ -12,8 +12,10 @@
 #                    purity-filtered auto-ingest, BM25 rebuild — plus the X Brain: keyless
 #                    FinTwit/AI posts + news lane + research.json/snapshot for the dashboard's
 #                    Research & Changes tabs).
-#   2. Dashboard   — scripts/build_dashboard.py (regenerate dashboard/ HTML from the
-#                    decision log + analyzed-stocks/, incl. the Changes/Research tabs).
+#   2. Dashboard   — fetch_metrics.py (refresh the per-ticker financials cache) ->
+#                    build_dashboard.py (regenerate dashboard/ HTML from the decision log +
+#                    analyzed-stocks/, incl. the Financials/Changes/Research tabs) ->
+#                    export_llm.py (write the LLM briefing: portfolio_llm.md + portfolio.json).
 #   3. Calibration — ta_memory.py pending + score (surface matured-but-unresolved
 #                    forecasts to grade, and print the standing Brier/alpha scorecard).
 #                    Resolution stays manual on purpose — it needs a written reflection.
@@ -74,9 +76,18 @@ if [ "$DO_DASH" = 1 ]; then
   if [ -f "$TA_MEM" ]; then
     ( cd "$ROOT" && "$PY" "$TA_MEM" watch ) || echo "  [warn] watch (under-pressure) failed (offline?) — using last cache"
   fi
+  # refresh the per-ticker financial metrics cache (Financials tab + detail Key-metrics
+  # box); network step, like watch — offline it keeps the last cache.
+  if [ -f "$ROOT/scripts/fetch_metrics.py" ]; then
+    ( cd "$ROOT" && "$PY" scripts/fetch_metrics.py ) || echo "  [warn] fetch_metrics failed (offline?) — using last cache"
+  fi
   if [ -f "$ROOT/scripts/build_dashboard.py" ]; then
     ( cd "$ROOT" && "$PY" scripts/build_dashboard.py ) || echo "  [warn] dashboard rebuild failed"
     echo "  -> open $ROOT/dashboard/index.html"
+    # export the LLM briefing (portfolio_llm.md + portfolio.json) for an external reviewer
+    if [ -f "$ROOT/scripts/export_llm.py" ]; then
+      ( cd "$ROOT" && "$PY" scripts/export_llm.py ) || echo "  [warn] export_llm failed"
+    fi
   else
     echo "  [skip] scripts/build_dashboard.py not found"
   fi

@@ -22,6 +22,7 @@
   </header>
 
   <div class="verdict-grid">
+    <div class="vbox"><div class="k">Latest price</div><div style="font-size:22px;font-weight:700">{{PRICE}}</div></div>
     <div class="vbox"><div class="k">Base rating</div><div><span class="badge {{BASE_CLS}}">{{BASE_RATING}}</span></div></div>
     <div class="vbox"><div class="k">Macro-adjusted</div><div><span class="badge {{MACRO_CLS}}">{{MACRO_RATING}}</span></div></div>
     <div class="vbox"><div class="k">P(beat benchmark)</div><div style="font-size:22px;font-weight:700">{{PBEAT}}</div></div>
@@ -40,6 +41,8 @@
 
   <h2>Forecast</h2>
   {{FORECAST_TABLE}}
+
+  {{METRICS_BOX}}
 
   <h2>Decision trend <span class="muted" style="text-transform:none;font-weight:400">· has the engine changed its mind?</span></h2>
   {{TREND}}

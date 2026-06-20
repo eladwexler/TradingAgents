@@ -18,6 +18,7 @@ Re-run it after every new verdict (the `/trading-analysis` skill does this in St
 |---|---|
 | `~/.tradingagents/memory/trading_memory.md` (`$TRADINGAGENTS_MEMORY_LOG_PATH`) | the uniform spine — rating, pending/resolved status, `P=`(beat) probability, horizon, realized raw/alpha once matured |
 | `analyzed-stocks/<TICKER>/<DATE>_decision.md` | richer detail — BASE/MACRO proposals, forecast table (12/24/36mo), verdict-for-new-investors, Jensen / Leopold / Combined verdicts, full body |
+| `metrics.json` (next to the decision log, written by `scripts/fetch_metrics.py`) | per-ticker market metrics — valuation (fwd P/E, PEG, EV/Sales, EV/EBITDA), profitability (FCF yield, margins, Rule-of-40), liquidity/risk (beta, short %, avg $ vol), next-earnings + analyst upside (powers the **Financials** tab + the detail **Key metrics** box) |
 
 A decision in either source shows up; missing fields degrade gracefully (older
 freeform decision files still render — they just have fewer badges).
@@ -50,6 +51,32 @@ entry per group; and the By-domain, By-stock and All-verdicts tables each carry 
 sortable **Bucket** column. To add/retag a name: set its `AI_DOMAIN`, and (if it's a
 new micro-domain) map that micro-domain in `BUCKET`.
 
+### Financials tab (per-ticker market metrics)
+The **📐 Financials** tab is a sortable table of the financial data the per-decision
+markdown only carried in prose: valuation (forward P/E, PEG, **EV/Sales**, **EV/EBITDA**,
+P/S), profitability (**FCF yield**, gross margin, **Rule-of-40** = rev-growth + FCF-margin),
+risk/liquidity (beta, **short % of float**, avg $ volume, 52-week range position) and the
+next-earnings date + analyst implied upside. The same fields render as a **Key metrics**
+grid on every detail page (`{{METRICS_BOX}}` in `decision.html`).
+
+Source: a cache `metrics.json` next to the decision log
+(`$TRADINGAGENTS_MEMORY_LOG_PATH` dir), produced by **`scripts/fetch_metrics.py`** (yfinance;
+one row per tracked ticker, derived fields computed). This mirrors the `watch →
+under_pressure.json → dashboard reads it` pattern: the **fetcher** does the network work and
+the **dashboard build stays offline-free** (reads the cache only; absent → the tab explains
+how to generate it; a per-ticker fetch error keeps the prior cached row). `update_all.sh`
+runs `fetch_metrics.py` right before the build. Data quality is yfinance's — an occasional
+bad field for a thin/foreign-resolving ticker is isolated to that row.
+
+### LLM export (briefing for an external model)
+**`scripts/export_llm.py`** writes a self-contained briefing another LLM can read to
+recommend a portfolio strategy: `dashboard/export/portfolio_llm.md` (primary) +
+`portfolio.json` (machine-precise). It reuses this builder's parsers, and bundles a TASK
+preamble, the macro phase (latest `ai-cycle-reports`), the calibration track-record, bucket
+**concentration**, a watchlist table, and per-name notes. `update_all.sh` runs it right after
+the dashboard build. Flags: `--full` (every dated decision), `--format md|json|both`,
+`--stdout`.
+
 ### Research tab (X Brain)
 The **Research** tab reads `$X_HOME/index/research.json` (default
 `/home/ewexler/projects/x-brain/index/research.json`, produced by the x-brain project's
@@ -68,15 +95,19 @@ the previous one** — built for a weekly (or daily) cadence so you don't re-rea
   verdicts (Jensen/Leopold/Jordi/Gavin/X) changing, shown old→new. Only counts when *both*
   sides exist (newly-added coverage isn't a "flip").
 - **📈 Forecast metric moves** — P(beat) (±0.03), Exp 24mo (±3pp), Priority (±5) with ▲/▼.
+- **📐 Financials moves** — week-over-week shifts in the market metrics: valuation re-rating
+  (forward P/E ±12%/±1.5pts, EV/Sales ±15%), **short-interest** spikes (±2pp of float),
+  **FCF-yield** shifts (±1pp), and analyst-upside changes (±5pp), sorted by magnitude with ▲/▼.
 - **🔬 X research shifts** — trends rising/falling/new in the ranking, and names flipping
   Bullish↔Mixed↔Bearish or moving most in net sentiment.
 
 "Latest run" = the most recent decision date (±3 days for weekend spillover). Decision diffs
-come from the dated `analyzed-stocks/` history (no extra storage); X-research diffs need a
-prior snapshot, so `analyze_corpus.py` archives `index/research_history/<date>.json` each run
-and the dashboard diffs current vs the most recent older snapshot (the Research tab also gets
-inline ▲/▼/NEW trend deltas). On the first changes-enabled build the X section just says
-"baseline saved — appears after the next refresh."
+come from the dated `analyzed-stocks/` history (no extra storage); the **X-research** and
+**Financials** diffs need a prior snapshot, so `analyze_corpus.py` archives
+`index/research_history/<date>.json` and `fetch_metrics.py` archives
+`metrics_history/<date>.json` (next to the decision log) each run, and the dashboard diffs
+current vs the most recent older snapshot. On the first run after enabling each, the section
+just says "baseline saved — appears after the next refresh."
 
 ### Under-pressure flag (open calls going wrong, interim)
 The 🔔 Changes tab leads with an **⚠️ Open calls under pressure** section (+ a header badge)

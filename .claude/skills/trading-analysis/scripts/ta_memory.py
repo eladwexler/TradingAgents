@@ -267,7 +267,8 @@ def months_to_days(months: float) -> int:
 class ReturnResult:
     """Realised return over a calendar window, with CAGR for multi-year horizons."""
 
-    def __init__(self, raw, alpha, elapsed_days, benchmark, cagr, target_days, reached):
+    def __init__(self, raw, alpha, elapsed_days, benchmark, cagr, target_days, reached,
+                 entry_price=None, last_price=None):
         self.raw = raw
         self.alpha = alpha
         self.elapsed_days = elapsed_days
@@ -275,6 +276,8 @@ class ReturnResult:
         self.cagr = cagr
         self.target_days = target_days
         self.reached = reached  # has the full target horizon elapsed yet?
+        self.entry_price = entry_price  # close on/at the analysis (entry) date
+        self.last_price = last_price    # latest close at/before the target date
 
 
 def fetch_returns(ticker: str, trade_date: str, horizon_days: int = 5) -> Optional[ReturnResult]:
@@ -319,9 +322,23 @@ def fetch_returns(ticker: str, trade_date: str, horizon_days: int = 5) -> Option
         elapsed = (stock.index[s_pos].to_pydatetime().replace(tzinfo=None) - start).days or 1
         cagr = (1.0 + raw) ** (365.25 / elapsed) - 1.0 if elapsed > 0 and raw > -1 else None
         reached = elapsed >= horizon_days * 0.95
-        return ReturnResult(raw, raw - bench_ret, elapsed, benchmark, cagr, horizon_days, reached)
+        return ReturnResult(raw, raw - bench_ret, elapsed, benchmark, cagr, horizon_days,
+                            reached, entry_price=s0, last_price=s1)
     except Exception as exc:  # noqa: BLE001
         print(f"WARN: could not compute returns for {ticker} @ {trade_date}: {exc}", file=sys.stderr)
+        return None
+
+
+def fetch_last_price(ticker: str) -> Optional[float]:
+    """Latest available close for ``ticker`` (most recent trading day), or None."""
+    import yfinance as yf
+    try:
+        df = yf.Ticker(ticker).history(period="5d")
+        if df is None or df.empty:
+            return None
+        return float(df["Close"].iloc[-1])
+    except Exception as exc:  # noqa: BLE001
+        print(f"WARN: could not fetch last price for {ticker}: {exc}", file=sys.stderr)
         return None
 
 
