@@ -52,6 +52,10 @@ ERROR_CLASSES = ("luck", "thesis", "calibration", "timing", "none")
 RATINGS_5_TIER = ("Buy", "Overweight", "Hold", "Underweight", "Sell")
 _RATING_SET = {r.lower() for r in RATINGS_5_TIER}
 _RATING_LABEL_RE = re.compile(r"rating.*?[:\-][\s*]*(\w+)", re.IGNORECASE)
+# The actual decision lives on the proposal line; anchor on it (BASE/plain, then MACRO)
+# so we never pick up the Shay timing tag, an analyst "strong_buy", or stray prose.
+_BASE_PROPOSAL_RE = re.compile(r"FINAL TRANSACTION PROPOSAL(?: \(BASE\))?:\s*(.*)", re.IGNORECASE)
+_MACRO_PROPOSAL_RE = re.compile(r"FINAL TRANSACTION PROPOSAL \(MACRO[- ]?ADJUSTED\):\s*(.*)", re.IGNORECASE)
 
 # --- benchmark map (mirrors tradingagents/default_config.py) ----------------
 _BENCHMARK_MAP = {
@@ -61,8 +65,28 @@ _BENCHMARK_MAP = {
 }
 
 
+def _rating_from_clause(clause: str):
+    """The 5-tier rating from a proposal clause, e.g. '**BUY** — *Buy* (...)' -> 'Buy',
+    'HOLD — *Underweight*.' -> 'Underweight'. Takes the last rating word before the first
+    sentence end / paren (so the action word is superseded by the explicit rating, and
+    trailing prose is ignored)."""
+    head = re.split(r"[.(]", clause, 1)[0]
+    words = [w for w in re.findall(r"[A-Za-z]+", head) if w.lower() in _RATING_SET]
+    return words[-1].title() if words else None
+
+
 def parse_rating(text: str, default: str = "Hold") -> str:
-    """Extract a 5-tier rating: explicit 'Rating: X' label, else first rating word."""
+    """Extract the 5-tier rating from the FINAL TRANSACTION PROPOSAL line (BASE first, then
+    MACRO), then an explicit 'Rating: X' label, then — only as a last resort — the first
+    rating word anywhere. Anchoring on the proposal line avoids mis-logging the Shay timing
+    tag or an analyst 'strong_buy' as the call."""
+    for rx in (_BASE_PROPOSAL_RE, _MACRO_PROPOSAL_RE):
+        for line in text.splitlines():
+            m = rx.search(line)
+            if m:
+                r = _rating_from_clause(m.group(1))
+                if r:
+                    return r
     for line in text.splitlines():
         m = _RATING_LABEL_RE.search(line)
         if m and m.group(1).lower() in _RATING_SET:
