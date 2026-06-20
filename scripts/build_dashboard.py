@@ -13,9 +13,15 @@ Sources of truth:
 Output -> dashboard/ (open dashboard/index.html).
 Rebuild:  python3 scripts/build_dashboard.py
 """
-import os, re, glob, html, json, datetime
+import os, re, glob, html, json, datetime, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(ROOT, ".claude", "skills", "trading-analysis", "scripts"))
+try:
+    from ta_memory import fetch_returns
+except ImportError:
+    fetch_returns = None
+
 TPL = os.path.join(ROOT, "scripts", "templates")
 OUT = os.path.join(ROOT, "dashboard")
 STOCKS = os.path.join(ROOT, "analyzed-stocks")
@@ -810,14 +816,31 @@ def main():
         if not prob and fc24.get("pbeat"):
             prob = re.sub(r"[^\d.]", "", fc24["pbeat"])
         exp24 = fc24.get("exp", "")
+        status = m.get("status", "pending")
+        raw_val = m.get("raw", "")
+        alpha_val = m.get("alpha", "")
+        holding_val = m.get("holding", "")
+
+        if status == "pending" and fetch_returns:
+            try:
+                days_elapsed = (datetime.datetime.now() - datetime.datetime.strptime(date, "%Y-%m-%d")).days
+                if days_elapsed > 0:
+                    r_res = fetch_returns(tk, date, days_elapsed)
+                    if r_res:
+                        raw_val = f"{r_res.raw:+.1%}"
+                        alpha_val = f"{r_res.alpha:+.1%}"
+                        holding_val = f"{r_res.elapsed_days}d (Live)"
+            except Exception:
+                pass
+
         recs.append({**d, "rating": rating, "base_action": base_action,
                      "macro_action": macro_action,
                      "macro_rating": d.get("macro_rating") or "",
-                     "status": m.get("status", "pending"), "raw": m.get("raw", ""),
-                     "alpha": m.get("alpha", ""), "holding": m.get("holding", ""),
+                     "status": status, "raw": raw_val,
+                     "alpha": alpha_val, "holding": holding_val,
                      "prob": prob, "horizon": m.get("horizon", "") or "24mo",
                      "exp24": exp24, "target24": fc24.get("target", ""),
-                     "pbeat_n": num(prob), "exp24_n": num(exp24), "alpha_n": num(m.get("alpha", ""))})
+                     "pbeat_n": num(prob), "exp24_n": num(exp24), "alpha_n": num(alpha_val)})
     recs.sort(key=lambda r: (r["date"], r["ticker"]), reverse=True)
 
     # ---- per-ticker decision trend (chart + plain-words conclusion) ----
@@ -1034,10 +1057,16 @@ def main():
         pb_n = r["pbeat_n"]
         pb_disp = f"{pb_n:.2f}" if pb_n is not None else "—"
         pb_sort = pb_n if pb_n is not None else -1
-        outcome = (f'{r["alpha"]} α' if r["status"] == "resolved" else
-                   (f'P {pb_disp}' if pb_n is not None else "pending"))
-        osort = r["alpha_n"] if r["status"] == "resolved" and r["alpha_n"] is not None else (pb_n or 0)
-        ocls = "b-pos" if (r["status"] == "resolved" and (r["alpha_n"] or 0) > 0) else ("b-neg" if r["status"] == "resolved" else "muted")
+        if r["status"] == "resolved":
+            outcome = f'{r["alpha"]} α'
+            ocls = "b-pos" if (r["alpha_n"] or 0) > 0 else "b-neg"
+        elif r["alpha"]:
+            outcome = f'<span style="color:#58a6ff">Live: {r["alpha"]} α</span>'
+            ocls = "b-pos" if (r["alpha_n"] or 0) > 0 else "b-neg"
+        else:
+            outcome = f'P {pb_disp}' if pb_n is not None else "pending"
+            ocls = "muted"
+        osort = r["alpha_n"] if r["alpha_n"] is not None else (pb_n or 0)
         exp_sort = r["exp24_n"] if r["exp24_n"] is not None else -999
         exp_disp = html.escape(r["exp24"] or "—")
         comb = badge(r["combined"], cls_combined(r["combined"])) if r["combined"] else "—"

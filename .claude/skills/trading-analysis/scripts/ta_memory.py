@@ -348,6 +348,22 @@ def cmd_log(args, log: DecisionLog) -> None:
         print(f"Already logged (pending) for {args.trade_date} | {args.ticker}; left unchanged.")
 
 
+def cmd_log_cycle(args, log: DecisionLog) -> None:
+    import csv
+    csv_path = log.path.parent / "ai_cycle_history.csv"
+    file_exists = csv_path.exists()
+    row = [args.date, args.phase, args.score] + args.indicators
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            headers = ["Date", "Phase", "Risk_Score", "Ind1_Capex", "Ind2_GPU", "Ind3_NVDA", "Ind4_LeadTimes",
+                       "Ind5_Financing", "Ind6_Concentration", "Ind7_Credibility", "Ind8_Depreciation", 
+                       "Ind9_Macro", "Ind10_Valuation", "Ind11_Insider", "Ind12_SoftwareCanary"]
+            writer.writerow(headers)
+        writer.writerow(row)
+    print(f"Logged AI Cycle state to {csv_path}")
+
+
 def cmd_pending(args, log: DecisionLog) -> None:
     pend = log.get_pending(args.ticker)
     if not pend:
@@ -483,6 +499,13 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--horizon-months", type=int, default=None,
                    help="forecast horizon in months (e.g. 24); used when resolving")
     s.set_defaults(func=cmd_log)
+
+    s = sub.add_parser("log_cycle", help="log the 12 AI cycle indicators to a CSV database")
+    s.add_argument("date", help="As-of date of the cycle report")
+    s.add_argument("--phase", required=True, help="Current macro phase")
+    s.add_argument("--score", required=True, help="Risk per AI Cake score 0-100")
+    s.add_argument("--indicators", nargs=12, required=True, help="The 12 indicator colors (Green/Amber/Red)")
+    s.set_defaults(func=cmd_log_cycle)
 
     s = sub.add_parser("pending", help="list entries awaiting an outcome")
     s.add_argument("ticker", nargs="?", default=None); s.set_defaults(func=cmd_pending)

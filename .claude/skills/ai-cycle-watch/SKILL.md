@@ -23,7 +23,12 @@ Ask for (or infer):
    python3 .claude/skills/trading-analysis/scripts/ta_data.py <command> [args]
    ```
    Useful here: `gather TICKER DATE` (one-shot bundle), `global_news DATE`, `news TICKER START END`, `snapshot TICKER DATE`, `fundamentals TICKER DATE`. Same **data-integrity rule applies: never state a number that didn't come from tool output.** If a command prints `NO_DATA`/`ERROR`, say the data is unavailable.
-2. **Live qualitative readings** — `WebSearch`/`WebFetch` for the indicators a price feed won't give you: hyperscaler capex guidance language, GPU rental/spot prices, transformer/power lead times, financing structure (circular deals, SPV/debt-funded data centers), and depreciation commentary. Always date-stamp what you find and cite the source.
+2. **Macro data** — run the new macro CLI for hard, quantitative indicators:
+   ```
+   python3 .claude/skills/trading-analysis/scripts/ta_macro_data.py <command>
+   ```
+   Commands: `macro` (10yr Treasury & High Yield proxy), `valuation` (Mag7 Forward P/E), `software_canary` (Application/Software YoY revenue growth).
+3. **Live qualitative readings** — `WebSearch`/`WebFetch` for the indicators a price feed won't give you: hyperscaler capex guidance language, GPU rental/spot prices, transformer/power lead times, financing structure (circular deals, SPV/debt-funded data centers), and depreciation commentary. Always date-stamp what you find and cite the source.
 
 ## The phase model (the map)
 
@@ -39,7 +44,7 @@ Phases overlap. The job is to locate the **center of gravity**, not pick one box
 
 ## The leading indicators (the canaries)
 
-Score each as **Green** (boom intact) / **Amber** (stress building) / **Red** (rolling over). These flip before price.
+Score each as **Green** (boom intact) / **Amber** (stress building) / **Red** (rolling over). These flip before price. Apply strict quantitative thresholds where specified.
 
 1. **Hyperscaler capex guidance** *(highest weight)* — MSFT/GOOGL/AMZN/META. Raising + "we're supply-constrained" = Green. First quarter any of them *guides capex down* or says "more disciplined" = the starting gun → Red.
 2. **GPU rental / spot prices** — H100/B200 hourly rates. Stable/rising = Green; **falling = supply outrunning demand = early glut** = Amber→Red. The canary.
@@ -49,9 +54,10 @@ Score each as **Green** (boom intact) / **Amber** (stress building) / **Red** (r
 6. **Market concentration** — index returns leaning on fewer names = fragility high = Amber.
 7. **Credibility events** — a flagship enterprise AI deployment publicly failing, or a marquee model release underwhelming = narrative crack = Red.
 8. **Depreciation vs. revenue** — as 2024–2026 capex depreciates into income statements, is AI revenue showing up to cover it? Gap widening = Amber→Red.
-9. **Macro/Cost of Capital** — 10-year Treasury yield and high-yield credit spreads. Spikes in yield = higher cost of debt for capex/SPVs = Amber→Red.
-10. **Valuation Heatmap** — Aggregate Forward P/E or PEG ratio of the Mag7/AI basket. Extreme multiple expansion vs historical baselines = euphoria = Amber.
-11. **Insider Selling & Smart Money** — C-suite/10% owner selling in the "survivors" basket (NVDA, MSFT, AVGO). Spikes in insider offloading while retail is euphoric = Red.
+9. **Macro/Cost of Capital** — Run `ta_macro_data.py macro`. 10-year Treasury > 4.5% or HYG dropping > 5% MoM = Red. Otherwise Amber if rising, Green if falling.
+10. **Valuation Heatmap** — Run `ta_macro_data.py valuation`. Mag7 Avg Fwd P/E > 35 = Red (Euphoria). Mag7 Avg Fwd P/E 28-35 = Amber. < 28 = Green.
+11. **Insider Selling & Smart Money** — C-suite/10% owner selling in the "survivors" basket (NVDA, MSFT, AVGO). Spikes > 2x trailing average = Red.
+12. **Application Layer ROI Canary** — Run `ta_macro_data.py software_canary`. If average YoY revenue growth of the software basket drops below 20% while Infrastructure Capex (#1) is still growing, this is a structural fracture = Red.
 
 ## The baskets (default watchlist)
 
@@ -73,10 +79,10 @@ Capex collapses fast; overbuilt compute/power sits idle and rental prices crater
 State the as-of date (absolute), the phase model, and that timing carries a wide error bar. Pull `ta_data.py global_news DATE` for macro context.
 
 ### Stage 1 — Read the indicators (live)
-For each of the 11 canaries, gather the latest reading via `WebSearch`/`WebFetch` (and `ta_data.py` for hard data, e.g., `fundamentals` for PEG, `insider` for insider selling). Date-stamp and cite each. If a reading can't be found, mark it **Unknown** — don't guess.
+For each of the 12 canaries, gather the latest reading. Run `ta_macro_data.py` commands (`macro`, `valuation`, `software_canary`) for the hard data indicators. Use `WebSearch`/`WebFetch` for the qualitative ones (capex guidance, GPU spot prices, lead times, financing). Date-stamp and cite each. If a reading can't be found, mark it **Unknown** — don't guess.
 
 ### Stage 2 — Score the board
-Produce a Green/Amber/Red table of all 11 indicators with the one-line evidence for each. Weight #1 (hyperscaler capex) and #2 (GPU rentals) most heavily.
+Produce a Green/Amber/Red table of all 12 indicators with the one-line evidence for each. You MUST respect the strict numerical thresholds defined above for the macro and valuation indicators. Weight #1 (hyperscaler capex) and #2 (GPU rentals) most heavily.
 
 ### Stage 3 — Locate the phase + timeline
 From the scored board, place the center of gravity on the phase map and give a **timeline window with its error bar**, distinguishing:
@@ -93,14 +99,24 @@ Translate into actionable, indicator-linked guidance (scale exposure to the cana
 ### Stage 6 — Persist
 Write the report to `ai-cycle-reports/<DATE>_cycle.md` (repo-relative; create the dir if missing) so successive runs form a time series — capex guidance and GPU prices read across dates are themselves a signal. Start the file with a one-line **stance** (e.g. `STANCE: Phase 2→3, indicators mostly Amber, structural-correction base case 2027–2029`) so it parses at a glance.
 
+Then, log the exact indicator colors and phase into the persistent CSV database by running:
+```bash
+python3 .claude/skills/trading-analysis/scripts/ta_memory.py log_cycle <DATE> \
+  --phase "<CURRENT_PHASE>" \
+  --score <RISK_SCORE_0_100> \
+  --indicators <COLOR_1> <COLOR_2> ... <COLOR_12>
+```
+*(Pass exactly 12 `Green`, `Amber`, or `Red` values in order).*
+
 ## Output format
 
 1. **Stance** up top: one line — current phase, net indicator color, correction window + error bar.
-2. **Indicator scoreboard** — the 11-row Green/Amber/Red table with dated evidence.
+2. **Indicator scoreboard** — the 12-row Green/Amber/Red table with dated evidence.
 3. **Phase + timeline** — where we are, sentiment-vs-structural distinction, the sequence to position for.
 4. **Survivor / casualty** — two short lists (or scored watchlist), with the one-reason-each.
 5. **Data caveat + disclaimer** — note any Unknown indicators / sources that returned nothing, and the standard not-financial-advice line.
 6. **Idiot Investor Summary (Jensen's Take)** — A summary clause at the very end giving the true risk score 0-100 of the "current risk per AI cake". Explain the score in really simple, plain English (idiot-proof) but keep a SERIOUS and professional tone. Adopt Jensen Huang's perspective: frame the AI build-out as a massive "AI cake" (total addressable market/opportunity) where the shift to accelerated computing and "AI factories" is a mandatory industrial revolution. Do not use silly baking metaphors; simply explain the serious underlying infrastructure reality versus the macro noise.
+7. **[HEDGE_CANDIDATES]** — A machine-readable JSON block containing 3-5 high-conviction short targets drawn from the Casualties list (e.g., leveraged neoclouds, over-valued wrappers). Format: ````json [ { "ticker": "...", "reason": "..." } ] ````. This will be ingested by the Portfolio Manager skill for pairs trades.
 
 ## Notes & failure modes
 - Data deps for `ta_data.py`: `pip install -r .claude/skills/trading-analysis/scripts/requirements.txt` (no keys) if a `ModuleNotFoundError` appears.

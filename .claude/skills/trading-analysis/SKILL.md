@@ -130,6 +130,8 @@ Run `max_risk_discuss_rounds` rounds (default 1) over the trader's proposal:
 ### Stage 6 — Portfolio Manager → final decision + calibrated forecast
 Synthesize the risk debate, the Expected-Return Model, **and any recalled past lessons** into a **Base Decision** (bottom-up). Then factor in the **Macro Phase / Stance** from the latest `ai-cycle-reports` (Stage 0) for a **Macro-Adjusted Decision**: if the cycle is in Late Phase 2 or Phase 3, haircut growth and apply more multiple compression — heavily penalize high-leverage infrastructure or AI wrappers to enforce top-down risk management on the bottom-up pick.
 
+**CRITICAL HEDGE CHECK:** Check if the ticker being analyzed appears in the `[HEDGE_CANDIDATES]` JSON block of the latest cycle report. If it does, automatically flag it as a HIGH-VULNERABILITY SHORT TARGET, forbid a "Buy" rating, and explicitly state that it was flagged by the macro cycle as a casualty.
+
 **Emit the forecast — this is the deliverable.** Produce a forecast block with, for the headline 24mo horizon (and 12/36 where you can):
 
 - **Expected total return** at the horizon (the probability-weighted blend of your bear/base/bull paths), with the three scenario paths and their probabilities shown.
