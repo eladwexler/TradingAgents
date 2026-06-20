@@ -43,6 +43,18 @@ def load_x_research(path):
         return {}
 
 
+UNDER_PRESSURE = os.path.join(os.path.dirname(MEM), "under_pressure.json")
+
+
+def load_under_pressure(path):
+    """ta_memory watch cache (open calls drifting against the thesis), or {} if absent."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
 def load_prev_research(cur):
     """Most recent dated research snapshot strictly older than the current one (for diffing)."""
     cur_date = (cur.get("generated", "") or "")[:10]
@@ -830,6 +842,25 @@ def build_reversals(ev):
         f'<ul class="chg">{rows(bear)}</ul>')
     return html_out, len(revs)
 
+def build_under_pressure(up):
+    """Render the ta_memory watch cache — open calls drifting against the thesis."""
+    flagged = (up or {}).get("flagged", [])
+    if not flagged:
+        return "", 0
+    gen = html.escape(str(up.get("generated", "")))
+    rows = ""
+    for x in flagged:
+        page = f'{x["ticker"]}_{x["date"]}.html'
+        raw = x.get("raw"); alpha = x.get("alpha")
+        rows += (f'<li><a href="{page}"><b>{html.escape(x["ticker"])}</b></a> '
+                 f'<span class="badge {cls_rating(x.get("rating",""))}">{html.escape(x.get("rating","") or "—")}</span> '
+                 f'<span class="b-neg">{raw:+.0%} raw / {alpha:+.0%} α</span> '
+                 f'<span class="muted">{x.get("elapsed_days","?")}d · {html.escape(x.get("reason",""))}</span></li>')
+    return (f'<h2>⚠️ Open calls under pressure <span class="muted">({len(flagged)})</span> '
+            f'<span class="muted" style="font-weight:400;text-transform:none">· interim mark vs the call '
+            f'(as of {gen}) — candidates to re-analyze before the horizon matures</span></h2>'
+            f'<ul class="chg">{rows}</ul>'), len(flagged)
+
 # ---------- build ------------------------------------------------------------
 
 def main():
@@ -1082,13 +1113,23 @@ def main():
     hit = sum(1 for r in res if r["alpha_n"] > 0)
     pend = sum(1 for r in recs if r["status"] == "pending")
     mean_alpha = (sum(r["alpha_n"] for r in res) / len(res)) if res else None
+    _tt_verdicts = ("Total number of logged trading-analysis forecasts across all runs. "
+                    "The smaller number is how many unique tickers those cover (a ticker re-analyzed "
+                    "later counts once here, but adds another verdict).")
+    _tt_pending = ("Forecasts whose target horizon (12–36 months) hasn't matured yet, so the real "
+                   "outcome can't be graded against the benchmark. They flip to Resolved once the "
+                   "horizon passes and the actual return + alpha are recorded.")
+    _tt_hit = ("Of the forecasts whose horizon has matured (Resolved), the share that beat their "
+               "benchmark — i.e. realized total return exceeded the benchmark over the same window.")
+    _tt_alpha = ("Average out-performance across all Resolved calls: realized return minus the "
+                 "benchmark's return over the same horizon. Positive = beat the benchmark on average.")
     cards = "".join([
-        f'<div class="card"><div class="k">Verdicts</div><div class="v">{len(recs)}<small> · {len(latest)} tickers</small></div></div>',
-        f'<div class="card"><div class="k">Pending</div><div class="v">{pend}<small> awaiting horizon</small></div></div>',
-        f'<div class="card"><div class="k">Resolved hit-rate</div><div class="v">{(100*hit/len(res)):.0f}%<small> {hit}/{len(res)} beat bench</small></div></div>' if res else
-        '<div class="card"><div class="k">Resolved hit-rate</div><div class="v">—<small> none matured</small></div></div>',
-        f'<div class="card"><div class="k">Mean realized alpha</div><div class="v {"b-pos" if (mean_alpha or 0)>0 else "b-neg"}">{mean_alpha:+.1f}%</div></div>' if mean_alpha is not None else
-        '<div class="card"><div class="k">Mean realized alpha</div><div class="v">—</div></div>',
+        f'<div class="card" title="{html.escape(_tt_verdicts)}"><div class="k">Verdicts</div><div class="v">{len(recs)}<small> · {len(latest)} tickers</small></div></div>',
+        f'<div class="card" title="{html.escape(_tt_pending)}"><div class="k">Pending</div><div class="v">{pend}<small> awaiting horizon</small></div></div>',
+        f'<div class="card" title="{html.escape(_tt_hit)}"><div class="k">Resolved hit-rate</div><div class="v">{(100*hit/len(res)):.0f}%<small> {hit}/{len(res)} beat bench</small></div></div>' if res else
+        f'<div class="card" title="{html.escape(_tt_hit)}"><div class="k">Resolved hit-rate</div><div class="v">—<small> none matured</small></div></div>',
+        f'<div class="card" title="{html.escape(_tt_alpha)}"><div class="k">Mean realized alpha</div><div class="v {"b-pos" if (mean_alpha or 0)>0 else "b-neg"}">{mean_alpha:+.1f}%</div></div>' if mean_alpha is not None else
+        f'<div class="card" title="{html.escape(_tt_alpha)}"><div class="k">Mean realized alpha</div><div class="v">—</div></div>',
     ])
 
     # ---- full table ----
@@ -1206,7 +1247,10 @@ def main():
                    f'{len(multi)-changed} held a stable read.</p>')
 
     # stance-change track-record card
-    cards += (f'<div class="card"><div class="k">Stance changes</div>'
+    _tt_stance = ("Among tickers analyzed more than once, how many had their verdict/stance change "
+                  "between the earliest and latest run (e.g. ALIGNED → EXPOSED). A measure of how "
+                  "often the view flipped as new data arrived.")
+    cards += (f'<div class="card" title="{html.escape(_tt_stance)}"><div class="k">Stance changes</div>'
               f'<div class="v">{changed}<small> of {len(multi)} multi-run names</small></div></div>')
 
     # domain filter dropdown — grouped under bucket optgroups, each with an
@@ -1226,15 +1270,18 @@ def main():
     rx_prev = load_prev_research(rx_cur)
     research_html = build_research(rx_cur, rx_prev)
     changes_ev, changes_n = compute_changes(recs, by_ticker, rx_cur, rx_prev)
-    changes_html = build_changes(changes_ev, rx_prev)
+    up_html, up_n = build_under_pressure(load_under_pressure(UNDER_PRESSURE))
+    changes_html = up_html + build_changes(changes_ev, rx_prev)
     reversals_html, reversals_n = build_reversals(changes_ev)
     badges = ''
+    if up_n:
+        badges += f'<span class="chgbadge upbadge">⚠️ {up_n} under pressure</span>'
     if changes_n:
         badges += f'<span class="chgbadge">🔔 {changes_n} change{"s" if changes_n != 1 else ""}</span>'
     if reversals_n:
         badges += f'<span class="chgbadge revbadge">🔄 {reversals_n} reversal{"s" if reversals_n != 1 else ""}</span>'
     changes_badge = badges
-    changes_tab = f'🔔 Changes{f" ({changes_n})" if changes_n else ""}'
+    changes_tab = f'🔔 Changes{f" ({changes_n + up_n})" if (changes_n + up_n) else ""}'
     reversals_tab = f'🔄 Reversals{f" ({reversals_n})" if reversals_n else ""}'
 
     itpl = open(os.path.join(TPL, "index.html"), encoding="utf-8").read()

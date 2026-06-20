@@ -39,6 +39,15 @@ _SEPARATOR = "\n\n<!-- ENTRY_END -->\n\n"
 _DECISION_RE = re.compile(r"DECISION:\n(.*?)(?=\nREFLECTION:|\Z)", re.DOTALL)
 _REFLECTION_RE = re.compile(r"REFLECTION:\n(.*?)$", re.DOTALL)
 
+# --- post-mortem error taxonomy (separates a flawed PROCESS from bad luck) ---
+# Stored on a resolved entry as the `E=` token so misses can be aggregated by cause.
+#   luck        - unforecastable shock; the process was sound -> do NOT learn from it
+#   thesis      - mis-judged fundamentals / valuation / moat   -> fix the analysis
+#   calibration - right direction but over-confident P / sizing -> fix the numbers
+#   timing      - right thesis, wrong entry                     -> entry/Shay lesson
+#   none        - call was correct / no error to record
+ERROR_CLASSES = ("luck", "thesis", "calibration", "timing", "none")
+
 # --- 5-tier rating heuristic (mirrors tradingagents/agents/utils/rating.py) -
 RATINGS_5_TIER = ("Buy", "Overweight", "Hold", "Underweight", "Sell")
 _RATING_SET = {r.lower() for r in RATINGS_5_TIER}
@@ -154,7 +163,7 @@ class DecisionLog:
 
     # --- update (Phase B) ---
     def update_with_outcome(self, ticker, trade_date, raw_return, alpha_return,
-                            holding_days, reflection, cagr=None) -> bool:
+                            holding_days, reflection, cagr=None, error_class=None) -> bool:
         if not self.path.exists():
             return False
         blocks = self.path.read_text(encoding="utf-8").split(_SEPARATOR)
@@ -184,6 +193,8 @@ class DecisionLog:
                     new_tag += f" | H={kv['H']}"
                 if cagr is not None:
                     new_tag += f" | CAGR={cagr:+.1%}"
+                if error_class:
+                    new_tag += f" | E={error_class}"
                 new_tag += "]"
                 rest = "\n".join(lines[1:])
                 new_blocks.append(f"{new_tag}\n\n{rest.lstrip()}\n\nREFLECTION:\n{reflection}")
@@ -225,6 +236,7 @@ class DecisionLog:
             "alpha": None if pending else (pos[4] if len(pos) > 4 else None),
             "holding": None if pending else (pos[5] if len(pos) > 5 else None),
             "prob": kv.get("P"), "horizon": kv.get("H"), "cagr": kv.get("CAGR"),
+            "error": kv.get("E"),
             "decision": dm.group(1).strip() if dm else "",
             "reflection": rm.group(1).strip() if rm else "",
         }
@@ -408,12 +420,19 @@ def cmd_resolve(args, log: DecisionLog) -> None:
               f"({r.elapsed_days}d of {r.target_days}d elapsed). "
               f"Use 'returns' for an interim mark, or pass --force to resolve early.")
         raise SystemExit(1)
+    ec = getattr(args, "error_class", None)
+    if ec and ec not in ERROR_CLASSES:
+        print(f"ERROR: --error-class must be one of {', '.join(ERROR_CLASSES)}", file=sys.stderr)
+        raise SystemExit(2)
     ok = log.update_with_outcome(args.ticker, args.trade_date, r.raw, r.alpha,
-                                 f"{r.elapsed_days}", reflection, cagr=r.cagr)
+                                 f"{r.elapsed_days}", reflection, cagr=r.cagr, error_class=ec)
     if ok:
         cagr_s = f" / CAGR {r.cagr:+.1%}" if r.cagr is not None else ""
+        ec_s = f" / error={ec}" if ec else ""
+        if r.alpha <= 0 and not ec:
+            ec_s = " / error=UNCLASSIFIED (pass --error-class luck|thesis|calibration|timing)"
         print(f"Resolved [{args.trade_date} | {args.ticker}] raw {r.raw:+.1%} / "
-              f"alpha vs {r.benchmark} {r.alpha:+.1%}{cagr_s} / {r.elapsed_days}d.")
+              f"alpha vs {r.benchmark} {r.alpha:+.1%}{cagr_s}{ec_s} / {r.elapsed_days}d.")
     else:
         print(f"No matching pending entry for {args.trade_date} | {args.ticker} (already resolved?).")
 
@@ -480,6 +499,95 @@ def cmd_score(args, log: DecisionLog) -> None:
         if grp:
             print(f"  {label:18} {sum(grp)/len(grp):+.1%}  (n={len(grp)})")
 
+    # --- why misses missed: post-mortem error taxonomy among losers ----------
+    misses = [e for e in resolved if (_pct_to_float(e["alpha"]) or 0) <= 0]
+    if misses:
+        from collections import Counter
+        classes = Counter((e.get("error") or "unclassified") for e in misses)
+        print(f"\nMiss post-mortems (n={len(misses)} below-benchmark) — by cause:")
+        for cls, n in classes.most_common():
+            note = " (process sound — don't over-learn)" if cls == "luck" else ""
+            print(f"  {cls:13} {n}{note}")
+        unclf = classes.get("unclassified", 0)
+        if unclf:
+            print(f"  -> {unclf} miss(es) UNCLASSIFIED: re-resolve with --error-class to learn from them")
+
+    # --- small-sample honesty: don't read calibration into a handful of calls -
+    if len(resolved) < 20:
+        print(f"\n⚠ SMALL SAMPLE (n={len(resolved)}): hit-rate/Brier are not yet statistically")
+        print("  meaningful (a handful of outcomes ≈ coin-flip noise). Treat these as")
+        print("  hypotheses, not validated lessons, until ~20–30+ resolved forecasts.")
+
+
+def _rating_stance(rating: str) -> int:
+    r = (rating or "").lower()
+    if r in ("buy", "overweight"):
+        return 1
+    if r in ("sell", "underweight"):
+        return -1
+    return 0
+
+
+def cmd_watch(args, log: DecisionLog) -> None:
+    """Flag OPEN (pending) calls whose interim mark has drifted against the thesis.
+
+    A bullish call lagging its benchmark, a bearish call being run over, or a Hold
+    that moved a lot — i.e. positions worth re-analysing before the horizon matures.
+    Writes ``under_pressure.json`` next to the memory log so the dashboard can show
+    a ⚠ flag without doing any network I/O at build time.
+    """
+    import json
+    pend = log.get_pending(args.ticker)
+    flagged, checked, skipped = [], 0, 0
+    for e in pend:
+        horizon_m = None
+        if e.get("horizon"):
+            m = re.search(r"\d+", e["horizon"])
+            if m:
+                horizon_m = int(m.group(0))
+        hd = months_to_days(horizon_m or args.horizon_months)
+        r = fetch_returns(e["ticker"], e["date"], hd)
+        if r is None:
+            skipped += 1
+            continue
+        checked += 1
+        if r.elapsed_days < args.min_days:
+            continue  # too soon — day-1 noise isn't a broken thesis
+        stance = _rating_stance(e["rating"])
+        reason = None
+        if stance > 0 and (r.alpha <= -args.alpha_threshold or r.raw <= -args.raw_threshold):
+            reason = f"bullish ({e['rating']}) but {r.raw:+.0%} raw / {r.alpha:+.0%} α — thesis under pressure"
+        elif stance < 0 and r.alpha >= args.alpha_threshold:
+            reason = f"bearish ({e['rating']}) but {r.raw:+.0%} raw / {r.alpha:+.0%} α — running against the call"
+        elif stance == 0 and abs(r.raw) >= args.big_move:
+            reason = f"Hold but moved {r.raw:+.0%} since the call — revisit"
+        if reason:
+            flagged.append({"ticker": e["ticker"], "date": e["date"], "rating": e["rating"],
+                            "raw": round(r.raw, 4), "alpha": round(r.alpha, 4),
+                            "cagr": (round(r.cagr, 4) if r.cagr is not None else None),
+                            "elapsed_days": r.elapsed_days, "benchmark": r.benchmark,
+                            "reason": reason})
+    flagged.sort(key=lambda x: x["alpha"])  # worst alpha first
+    cache = log.path.parent / "under_pressure.json"
+    payload = {"generated": datetime.now().strftime("%Y-%m-%d %H:%M"), "checked": checked,
+               "flagged": flagged,
+               "params": {"alpha_threshold": args.alpha_threshold, "raw_threshold": args.raw_threshold,
+                          "min_days": args.min_days}}
+    try:
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as exc:  # noqa: BLE001
+        print(f"WARN: could not write {cache}: {exc}", file=sys.stderr)
+    if not flagged:
+        print(f"No open calls under pressure ({checked} checked, ≥{args.min_days}d elapsed). Cache -> {cache}")
+        return
+    print(f"⚠ {len(flagged)} open call(s) under pressure (of {checked} checked):")
+    for x in flagged:
+        cg = f" / CAGR {x['cagr']:+.0%}" if x["cagr"] is not None else ""
+        print(f"  {x['ticker']:6} {x['date']}  {x['raw']:+.0%} raw / {x['alpha']:+.0%} α{cg}  "
+              f"{x['elapsed_days']}d — {x['reason']}")
+    print(f"\nConsider re-running /trading-analysis on these. Cache -> {cache}")
+
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="ta_memory.py", description=__doc__,
@@ -523,7 +631,24 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--holding-days", type=int, default=5)
     s.add_argument("--horizon-months", type=int, default=None, help="forecast horizon in months (preferred)")
     s.add_argument("--force", action="store_true", help="resolve even if the full horizon has not elapsed")
+    s.add_argument("--error-class", choices=ERROR_CLASSES, default=None,
+                   help="post-mortem cause of a miss: luck|thesis|calibration|timing|none "
+                        "(separates a flawed process from bad luck — required to learn from a miss)")
     s.set_defaults(func=cmd_resolve)
+
+    s = sub.add_parser("watch", help="flag OPEN calls whose interim mark has drifted against the thesis")
+    s.add_argument("ticker", nargs="?", default=None)
+    s.add_argument("--alpha-threshold", type=float, default=0.10,
+                   help="flag when |interim alpha| exceeds this against the call (default 0.10)")
+    s.add_argument("--raw-threshold", type=float, default=0.20,
+                   help="also flag a bullish call down more than this raw (default 0.20)")
+    s.add_argument("--big-move", type=float, default=0.30,
+                   help="flag a Hold that moved more than this raw (default 0.30)")
+    s.add_argument("--min-days", type=int, default=21,
+                   help="ignore calls younger than this many calendar days (default 21)")
+    s.add_argument("--horizon-months", type=int, default=24,
+                   help="horizon to mark against when an entry has none (default 24)")
+    s.set_defaults(func=cmd_watch)
 
     s = sub.add_parser("score", help="calibration & skill scorecard over resolved predictions")
     s.add_argument("ticker", nargs="?", default=None)

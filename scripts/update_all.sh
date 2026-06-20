@@ -70,6 +70,10 @@ fi
 
 if [ "$DO_DASH" = 1 ]; then
   step "2/3  DASHBOARD (regenerate dashboard/ HTML)"
+  # refresh the 'open calls under pressure' cache first so the dashboard ⚠️ flag is current
+  if [ -f "$TA_MEM" ]; then
+    ( cd "$ROOT" && "$PY" "$TA_MEM" watch ) || echo "  [warn] watch (under-pressure) failed (offline?) — using last cache"
+  fi
   if [ -f "$ROOT/scripts/build_dashboard.py" ]; then
     ( cd "$ROOT" && "$PY" scripts/build_dashboard.py ) || echo "  [warn] dashboard rebuild failed"
     echo "  -> open $ROOT/dashboard/index.html"

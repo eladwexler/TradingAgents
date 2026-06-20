@@ -78,6 +78,16 @@ and the dashboard diffs current vs the most recent older snapshot (the Research 
 inline ▲/▼/NEW trend deltas). On the first changes-enabled build the X section just says
 "baseline saved — appears after the next refresh."
 
+### Under-pressure flag (open calls going wrong, interim)
+The 🔔 Changes tab leads with an **⚠️ Open calls under pressure** section (+ a header badge)
+listing *pending* forecasts whose interim mark has drifted against the thesis — a BUY lagging
+its benchmark, a bearish call being run over, or a Hold that moved a lot. It's a re-analyze
+worklist, surfaced *before* the horizon matures. Source: `ta_memory.py watch` computes the
+marks (yfinance) and writes `under_pressure.json` next to the memory log; the dashboard only
+*reads* that cache, so the build stays network-free. `update_all.sh` runs `watch` right before
+the dashboard build; thresholds are tunable (`--alpha-threshold`, `--raw-threshold`,
+`--min-days`).
+
 ### Reversals tab (act-on-it signals)
 The **🔄 Reversals** tab isolates the subset of rating flips that **crossed the neutral line**
 between bullish (Buy/Overweight) and bearish (Sell/Underweight) since the previous run — the
