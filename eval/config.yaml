@@ -1,0 +1,35 @@
+# eval/ backtest benchmark — configuration
+# All dates inclusive. Everything here is point-in-time clean: no field requires
+# knowledge of the future relative to its "as-of" date.
+
+window:
+  # Headline benchmark: a single 12-month buy-and-hold over the trailing year.
+  start: "2025-06-20"      # entry / as-of date for the headline run
+  end:   "2026-06-20"      # exit (≈ today)
+
+# Robustness study: re-measure signal predictiveness at monthly anchors so the
+# verdict does not hinge on one start date. Uses a SHORTER fixed forward horizon
+# so every anchor's forward window completes inside the available history.
+monthly_ic:
+  anchors: 15              # number of monthly anchor dates to attempt, walking back from `end`
+  forward_trading_days: 63 # ~3 calendar months forward return per anchor
+  min_names: 10            # skip an anchor cross-section with fewer usable names
+
+benchmark_ticker: "SPY"    # the hurdle every name/strategy is measured against
+
+universe:
+  source: "analyzed-stocks"  # read ticker NAMES only (subdir names), read-only
+  # Names that are not real tradable US tickers / yfinance has no history for.
+  exclude: ["KEEL", "WYFI", "PENG", "SIVE", "BRUN", "TE", "Q"]
+
+signals:
+  # Point-in-time, price-only signals (computable on the as-of date with NO
+  # forward knowledge). Valuation factors are deliberately OMITTED: point-in-time
+  # fundamentals are not available keyless, and using today's P/E as-of a past
+  # date would be lookahead bias. See README.
+  momentum_12m_lookback: 252   # trading days
+  momentum_6m_lookback: 126
+  ma_long: 200                 # distance-from-200dma trend signal
+  quintiles: 5                 # for the long-short spread
+
+cache_dir: "eval/.price_cache"   # local parquet/csv price cache; never read by main analysis
