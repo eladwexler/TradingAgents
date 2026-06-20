@@ -366,10 +366,42 @@ size smaller and treat it as a trade, not a franchise hold*; a financial **HOLD/
 revisit on a pullback*. When they agree, say so and let conviction compound. Always carry
 the **thin-evidence flag** if either brain was Insufficient.
 
+### Stage 6.8 — Conviction Verdict (actionable 12-month-hold tier — STRICT, score-moving on sizing)
+Translate the verdict into a **conviction tier you can actually buy on for a ≥12-month hold**:
+**HIGH / MEDIUM / LOW / AVOID** + a suggested position size. This is the antidote to the
+calibration problem — a raw "BUY" claims only ~0.55 P(beat SPY) in a universe where ~65% of
+names beat SPY anyway, so the rating alone is **not** high-probability. Conviction is earned by
+*independent axes agreeing*, with a **hard veto** that the narrative cannot override.
+
+Grounded in the `eval/` backtest findings: momentum/technicals had **negative** 12-month
+predictive power here (so they get **zero** weight in the hold call — they are entry-timing
+only, Stage 1), dispersion was −90%…+4500% (so avoiding blow-ups dominates picking the top),
+and the AI-cycle risk gauge leads on risk but can't time (so it scales **size**, never in/out).
+
+Apply the **hard vetoes → AVOID** (no matter how bullish the brains):
+- **Unprofitable cash-burner** (negative profit margin **and** negative/again-absent FCF) — survival risk.
+- **Extreme valuation** the growth doesn't justify (PEG > 3, or — when PEG is unavailable — forward P/E > 70).
+- **Secular thesis offside** (Combined Strategic Verdict EXPOSED or OFFSIDE).
+- **Cycle-watch casualty** (leveraged "neocloud" / SPV-financed data-center operator).
+- **Microcap (< $2B)** cannot carry HIGH/MEDIUM for a 12mo hold — cap at LOW (it's the idiosyncratic tail).
+
+For names that clear the vetoes, **HIGH** requires durable fundamentals (Rule-of-40 strong),
+valuation sanity (PEG reasonable / positive FCF yield), the secular gate passed
+(Combined ALIGNED or CONVICTION ALIGNED), **and** P(beat) ≥ 0.58. Otherwise MEDIUM/LOW.
+
+Don't hand-compute it — run the deterministic scorer and quote its tier/size:
+```
+python3 scripts/conviction.py TICKER
+```
+Report a **`Conviction Verdict:`** line: the tier, the suggested size (% of a full unit, already
+scaled by the current cycle risk), and the one-line reason or veto. State plainly when conviction
+**diverges from the rating** (e.g. *financial BUY but Conviction AVOID on extreme valuation → do
+not initiate a franchise hold*). Size by the cycle gauge; never let it flip you fully in/out.
+
 ### Stage 7 — Persist the decision
 Save the final decision to a per-ticker file **and** append it to the memory log so the next run can learn from it.
 
-1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with a **`Price at analysis: $<close> (<DATE> close)` line** (the verified spot/close from the Stage 1 `snapshot` — the entry-price reference the dashboard parses and marks-to-market against the live price), then the base proposal, macro-adjusted proposal, the `VERDICT FOR NEW INVESTORS:` line, the ratings, **and the forecast block (expected total return + scenarios + P(beats benchmark) + horizon)** so they parse cleanly, followed by the decision summary, key evidence, the plan, and at the end the **`Jensen Brain Verdict:` line**, the **`Leopold Brain Verdict:` line**, the **`Jordi Brain Verdict:` line**, the **`Gavin Brain Verdict:` line**, the **`X Brain Verdict:` line** (the FinTwit sentiment overlay — separate from the four brains), and the **`Combined Strategic Verdict:` line** (with its reconciliation sentence). Use the exact verified close from `snapshot`; if `snapshot` returned `NO_DATA`, omit the price line rather than estimating.
+1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with a **`Price at analysis: $<close> (<DATE> close)` line** (the verified spot/close from the Stage 1 `snapshot` — the entry-price reference the dashboard parses and marks-to-market against the live price), then the base proposal, macro-adjusted proposal, the `VERDICT FOR NEW INVESTORS:` line, the ratings, **and the forecast block (expected total return + scenarios + P(beats benchmark) + horizon)** so they parse cleanly, followed by the decision summary, key evidence, the plan, and at the end the **`Jensen Brain Verdict:` line**, the **`Leopold Brain Verdict:` line**, the **`Jordi Brain Verdict:` line**, the **`Gavin Brain Verdict:` line**, the **`X Brain Verdict:` line** (the FinTwit sentiment overlay — separate from the four brains), the **`Combined Strategic Verdict:` line** (with its reconciliation sentence), and the **`Conviction Verdict:` line** (Stage 6.8 — tier + suggested size + reason/veto). Use the exact verified close from `snapshot`; if `snapshot` returned `NO_DATA`, omit the price line rather than estimating.
 2. Log it **with the forecast probability and horizon** (so it can be Brier-scored at maturity):
 ```
 mkdir -p analyzed-stocks/TICKER
@@ -378,8 +410,9 @@ python3 .claude/skills/trading-analysis/scripts/ta_memory.py log TICKER DATE \
     --file analyzed-stocks/TICKER/DATE_decision.md \
     --prob 0.66 --horizon-months 24
 ```
-3. Refresh the HTML dashboard so the new verdict is viewable and the best-call
-   leaderboards update: `python3 scripts/build_dashboard.py` (regenerates
+3. Refresh the conviction tiers, then the HTML dashboard so the new verdict is viewable and
+   the best-call leaderboards update:
+   `python3 scripts/conviction.py >/dev/null && python3 scripts/build_dashboard.py` (regenerates
    `dashboard/index.html` + a per-decision page from `scripts/templates/`; pure stdlib,
    reads the memory log + `analyzed-stocks/`). See `scripts/DASHBOARD.md`.
 
