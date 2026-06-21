@@ -23,6 +23,24 @@ except ImportError:
     fetch_returns = None
     fetch_last_price = None
 
+_LIVE_PRICE = {}  # ticker -> latest live close (fetched once per build), or None
+
+
+def live_last_price(tk):
+    """Latest live close for ``tk`` — fetched once per build and cached.
+
+    Works for brand-new decisions too (uses a recent-history window, not the
+    return horizon), so the Price column populates even before a call has any
+    realized-return window. None if the feed is unavailable."""
+    if not fetch_last_price:
+        return None
+    if tk not in _LIVE_PRICE:
+        try:
+            _LIVE_PRICE[tk] = fetch_last_price(tk)
+        except Exception:
+            _LIVE_PRICE[tk] = None
+    return _LIVE_PRICE[tk]
+
 TPL = os.path.join(ROOT, "scripts", "templates")
 OUT = os.path.join(ROOT, "dashboard")
 STOCKS = os.path.join(ROOT, "analyzed-stocks")
@@ -1319,22 +1337,27 @@ def main():
         # price at analysis (entry reference) recorded in the decision file, if any
         price_at_n = num(d.get("price_at", ""))
         last_price_n = None  # latest live close (most recent trading day)
+        market_cap_n = (metrics.get(tk) or {}).get("market_cap")
 
-        if status == "pending" and fetch_returns:
-            try:
-                days_elapsed = (datetime.datetime.now() - datetime.datetime.strptime(date, "%Y-%m-%d")).days
-                if days_elapsed > 0:
-                    r_res = fetch_returns(tk, date, days_elapsed)
-                    if r_res:
-                        raw_val = f"{r_res.raw:+.1%}"
-                        alpha_val = f"{r_res.alpha:+.1%}"
-                        holding_val = f"{r_res.elapsed_days}d (Live)"
-                        if r_res.last_price is not None:
-                            last_price_n = r_res.last_price
-                        if price_at_n is None and r_res.entry_price is not None:
-                            price_at_n = r_res.entry_price  # backfill entry from prices
-            except Exception:
-                pass
+        if status == "pending":
+            # Always show a live price, even for a decision logged today (its
+            # return window has no completed trading rows yet).
+            last_price_n = live_last_price(tk)
+            if fetch_returns:
+                try:
+                    days_elapsed = (datetime.datetime.now() - datetime.datetime.strptime(date, "%Y-%m-%d")).days
+                    if days_elapsed > 0:
+                        r_res = fetch_returns(tk, date, days_elapsed)
+                        if r_res:
+                            raw_val = f"{r_res.raw:+.1%}"
+                            alpha_val = f"{r_res.alpha:+.1%}"
+                            holding_val = f"{r_res.elapsed_days}d (Live)"
+                            if r_res.last_price is not None:
+                                last_price_n = r_res.last_price
+                            if price_at_n is None and r_res.entry_price is not None:
+                                price_at_n = r_res.entry_price  # backfill entry from prices
+                except Exception:
+                    pass
 
         recs.append({**d, "rating": rating, "base_action": base_action,
                      "macro_action": macro_action,
@@ -1344,6 +1367,7 @@ def main():
                      "prob": prob, "horizon": m.get("horizon", "") or "24mo",
                      "exp24": exp24, "target24": fc24.get("target", ""),
                      "price_at_n": price_at_n, "last_price_n": last_price_n,
+                     "market_cap_n": market_cap_n,
                      "pbeat_n": num(prob), "exp24_n": num(exp24), "alpha_n": num(alpha_val)})
     recs.sort(key=lambda r: (r["date"], r["ticker"]), reverse=True)
 
@@ -1650,6 +1674,7 @@ def main():
             f'<tr title="{row_tip}" data-domain="{dom_cell}" data-bucket="{html.escape(bkt)}">'
             f'<td data-s="{r["date"]}">{r["date"]}</td>'
             f'<td><b>{tk}</b></td>'
+            f'<td class="num" data-s="{r["market_cap_n"] if r["market_cap_n"] is not None else -1}">{_m_money(r["market_cap_n"])}</td>'
             f'<td class="num" data-s="{r["last_price_n"] if r["last_price_n"] is not None else (r["price_at_n"] or -1)}">{price_cell(r)}</td>'
             f'<td class="num" data-s="{prio_raw:.3f}"><span class="badge {cls_priority(prio)}">{prio}</span></td>'
             f'<td data-s="{cv_s}" style="white-space:nowrap">{cv_cell}</td>'

@@ -314,6 +314,11 @@ def fetch_returns(ticker: str, trade_date: str, horizon_days: int = 5) -> Option
     not a final outcome).
     """
     import yfinance as yf
+    # yfinance logs a noisy "$TKR: possibly delisted; no price data found" line to
+    # stderr whenever a window has no completed trading days yet (e.g. a decision
+    # logged today, before its first trading row exists). The empty result is
+    # handled below; mute the logger so it doesn't spam the dashboard build.
+    _silence_yfinance()
 
     benchmark = resolve_benchmark(ticker)
     try:
@@ -353,9 +358,20 @@ def fetch_returns(ticker: str, trade_date: str, horizon_days: int = 5) -> Option
         return None
 
 
+def _silence_yfinance() -> None:
+    """Mute yfinance's "possibly delisted; no price data found" stderr noise.
+
+    Those lines fire whenever a requested window has no completed trading rows
+    yet (a freshly-logged decision, a future/empty range). We always handle the
+    empty result explicitly, so the logger spam is pure noise."""
+    import logging
+    logging.getLogger("yfinance").setLevel(logging.CRITICAL)
+
+
 def fetch_last_price(ticker: str) -> Optional[float]:
     """Latest available close for ``ticker`` (most recent trading day), or None."""
     import yfinance as yf
+    _silence_yfinance()
     try:
         df = yf.Ticker(ticker).history(period="5d")
         if df is None or df.empty:
