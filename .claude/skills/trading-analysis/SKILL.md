@@ -85,13 +85,40 @@ Next, check the `ai-cycle-reports/` directory for the latest `*_cycle.md` report
 
 Then run `ta_data.py identity TICKER` (or take it from the `gather` bundle). Use the resolved company/sector in every downstream section. Do not substitute a different company unless a later tool result explicitly disproves it. (For crypto `-USD` tickers, treat as an asset; fundamentals may be unavailable.)
 
+### Stage 0.5 — Industry-news freshness gate (run once per date)
+The pipeline now consumes a **primary-source industry corpus** — the companion `ai-news`
+project (SemiAnalysis, Fabricated Knowledge, Epoch AI, Next Platform, Data Center Dynamics,
+…) — which powers both the upgraded Stage 1.3 News analyst and the new Stage 6.68 **Industry
+Brain**. Before analyzing, run the **idempotent freshness gate** so the news is fetched **at
+most once per calendar day**, no matter how many tickers you run:
+
+```
+python3 .claude/skills/trading-analysis/scripts/ensure_news.py CURR_DATE
+```
+
+It decides automatically: if the payload for the date **already exists → SKIP** (never
+re-fetch); if it's **missing and the date is today → FETCH** (fetch + process + rebuild the
+Industry Brain index); if **missing and the date is in the past → NO_BACKFILL** (RSS only
+carries ~24h — it uses the existing historical index). It prints `STATUS:`, the `RECENT
+WINDOW` of days that have data, and the `PAYLOAD` / `INDEX` paths. **Feeds publish
+irregularly**, so a single day is often sparse — downstream stages therefore read a **multi-
+day lookback window**, not just the analysis date. If `STATUS: UNAVAILABLE` (ai-news project
+absent), note the Industry lens as unavailable and continue with the legacy `ta_data` news —
+**do not fabricate**. Set `AINEWS_HOME` if `ai-news` lives elsewhere (default
+`/home/ewexler/projects/ai-news`).
+
 ### Stage 1 — Analyst team (gather + report)
 Produce four standalone reports. Each ends with a Markdown summary table. **Weighting for the multi-year forecast: Fundamentals/valuation dominate (~50%), News/secular-drivers ~25%, Technicals ~15% (regime + entry timing only), Sentiment ~10% (contrarian check only).** Do not let a stretched RSI or euphoric StockTwits feed override a durable-growth, reasonable-valuation thesis — that is the classic short-horizon error this tool exists to avoid.
 
 1. **Market / Technical Analyst.** Run `snapshot` (treat as source of truth), `stock_data`, then `indicators` for **up to 8 complementary** indicators (no redundant pairs, e.g. not both rsi and stochrsi). Briefly justify each for the current regime. **Frame this as regime + entry-timing context for a multi-year position — not the thesis.** Distinguish "the trend is broken" (thesis-relevant) from "short-term overbought" (timing-only; a reason to scale in, never to forecast lower 2-year returns). Note the 200-day trend, drawdown depth from highs, and realised volatility (ATR) for position sizing.
    **The snapshot includes an automatic Shay Boloor Verdict classification on the Daily Timeframe** (9 EMA / 21 EMA / 50 SMA / 200 SMA), with SMA slope quality, volume confirmation, and a 21-EMA extension warning. **Treat this as entry-timing context only — it does NOT change the multi-year forecast or the BASE/MACRO decision.** It answers one narrow question: *if you were opening a new position today, is this a good moment to do so?* A 🔴 BEARISH reading (price below the 200 SMA) is a timing signal, not a sell — for a durable-growth thesis a sub-200-SMA price is often a better accumulation zone, so never let the verdict override a fundamentals-driven BUY. The three qualifiers matter for *timing and sizing a new entry*: (a) *SMA slope* — price above a flat/declining 200 SMA is weaker than above a rising one; (b) *volume* — breakouts on thin volume lack conviction; (c) *extension* — even in a bullish structure, price stretched ≥15–25% above the 21 EMA means risk/reward for *new* entries is poor (the classic AI-infra momentum trap — buying MRVL/CRDO/NBIS after the explosive move when the 9/21 gap is already blown out). When the extension warning fires, the thesis is unchanged but new-money sizing should be smaller and the VERDICT FOR NEW INVESTORS must note the stretched entry. For someone who **already holds** the name, the verdict is informational only — surface it in the appendix, not as a reason to trim a multi-year position.
 2. **Sentiment Analyst.** Run `sentiment TICKER CURR_DATE`. Read the StockTwits Bullish/Bearish ratio (≈70/30 mildly bullish; ≥90/10 possible over-extension/contrarian risk; 50/50 uncertain — weight by message count). Weight Reddit by engagement; flag cross-source divergences and data limits. **Over a 12–36mo horizon, retail sentiment is a weak, mostly contrarian signal** — euphoria is a mild caution, capitulation a mild positive; neither sets the forecast. Emit: **overall_band**, **overall_score** 0–10, **confidence**, and a short signal table.
-3. **News & Secular-Driver Analyst.** Run `news TICKER START END` (≈7-day window) and `global_news CURR_DATE`. Summarize company-specific and macro developments, but emphasize the **durable, multi-year drivers**: AI-capex demand curve, design wins / backlog / contracted revenue, competitive moat shifts, regulatory/structural changes. Cross-reference the `ai-cycle-reports` macro phase. One-off headlines matter only insofar as they change the multi-year trajectory.
+3. **News & Secular-Driver Analyst.** First pull the **curated primary-source industry desk** for the name over a multi-day lookback window (the high-signal upgrade over generic headlines):
+   ```
+   python3 .claude/skills/trading-analysis/scripts/industry_news.py CURR_DATE \
+       "<ticker> <company> <CEO> <product/codename aliases>" --lookback 4
+   ```
+   It reads the `ai-news` payloads across the window (deduped, pillar-tagged), surfacing **ticker-relevant articles** plus **sector/macro context** grouped by pillar (macro_finance / silicon_hardware / supply_chain_chokepoints / physical_infrastructure). Treat this as the primary news input. **Then** run `news TICKER START END` (≈7-day window) and `global_news CURR_DATE` to backfill anything ticker-specific the industry desk misses (price-moving filings, guidance, M&A). If `industry_news.py` prints `NO_PAYLOAD`, fall back to `ta_data` news alone and say so. Summarize company-specific and macro developments, but emphasize the **durable, multi-year drivers**: AI-capex demand curve, design wins / backlog / contracted revenue, competitive moat shifts, regulatory/structural changes. Cross-reference the `ai-cycle-reports` macro phase. One-off headlines matter only insofar as they change the multi-year trajectory.
 4. **Fundamentals & Valuation Analyst (most important for this tool).** Run `forward TICKER` **and** `fundamentals`, plus `balance_sheet`/`cashflow`/`income_statement` and `insider` as useful. Cover: growth durability (revenue/EPS/FCF trajectory and consensus LTG), margins and returns on capital, **valuation** (trailing & forward P/E, PEG, where the multiple sits vs history), balance-sheet survivability through a drawdown (debt, interest cover, cash runway — critical for pre-profit AI-infra names), and red flags (insider selling, dilution). Then build the **Expected-Return Model** below. (Skip/curtail for crypto — use demand/flow/scarcity instead.)
 
 #### The Expected-Return Model (required — this produces the forecast)
@@ -329,6 +356,43 @@ both scores thin leans *Insufficient chatter*. Map to:
 - **Why:** 2–4 bullets on the bull-vs-bear balance, the trend it rides (or not), and whether the signal is account-driven or news-lane-only (note if Nitter was down).
 - **In their words:** 1–3 short quoted snippets, each cited `(<date> — @account or source, <url>)`. Quote only retrieved text; never invent posts. If both coverage scores are ~0, say the crowd isn't discussing it.
 
+### Stage 6.68 — Industry Brain Verdict (primary-source hard-data lens)
+After the X Brain, add an **Industry Brain Verdict**: does the **primary-source industry
+record** sit with or against the name's demand/supply/competitive position? This is the
+**only hard-data lens** in the pipeline — every other brain is a personality or crowd corpus
+(Jensen/Leopold/Jordi/Gavin transcripts, X sentiment); the Industry Brain is a BM25 index
+over the `ai-news` corpus (SemiAnalysis, Fabricated Knowledge, Epoch AI, Next Platform, DCD,
+Semiconductor Engineering, …) and reads what the literature **actually reported** about
+CoWoS/HBM allocation, hyperscaler capex, foundry yields, power constraints, oversupply/glut,
+and share shifts. It is the **sanity check on the four opinion brains, not a fifth opinion** —
+so like the X Brain it is **surfaced, not score-moving and NOT part of the Combined Strategic
+Verdict** (Stage 6.7 still fuses only Jensen/Leopold/Jordi/Gavin). It does **not** alter the
+forecast or the BASE/MACRO ratings.
+
+Run the bridge (corpus already refreshed by the Stage 0.5 gate). Pass alias terms — company,
+products/codenames, ticker — plus the pillars/themes it touches:
+
+```
+python3 .claude/skills/trading-analysis/scripts/industry_brain.py \
+    "<company> <products/codenames> <ticker/aliases>" \
+    --sector "<pillars/themes it touches: silicon_hardware / accelerator / HBM / CoWoS / foundry / inference / training / datacenter / power / capex / networking-optics>" \
+    --k 5
+```
+(Set `AINEWS_HOME` if `ai-news` lives elsewhere; default `/home/ewexler/projects/ai-news`.
+ If the bridge reports the index is missing/unavailable, note Industry Brain as unavailable
+ and skip — do not fabricate.)
+
+The bridge returns four passage groups (direct mentions, sector/theme fit, a tailwind lens,
+a headwind lens) and an `industry_direct_score` coverage signal. Decide one verdict by
+weighing **what the primary sources report about demand vs supply for this name's products** —
+accelerating demand / supply tightness / capex inflows lean *Demand tailwind*; oversupply /
+glut / capex digestion / displacement / share loss lean *Demand headwind*; genuine
+cross-currents lean *Mixed*; thin/absent coverage leans *Insufficient coverage*. Map to:
+
+- **Industry Brain Verdict:** Demand tailwind / Mixed / Demand headwind / Insufficient coverage — with confidence (low/med/high).
+- **Why:** 2–4 bullets on what the literature reports about this name's demand/supply/capex/competition, citing the pillar(s) it touches and whether the read is direct or sector-inferred.
+- **In the literature:** 1–3 short quoted snippets, each cited `(<date> — <source>, <url>)`. Quote only retrieved text; never invent. If `industry_direct_score` is low, say the corpus does not cover it directly and lean on sector fit.
+
 ### Stage 6.7 — Combined Strategic Verdict (strict)
 Finally, fuse the four secular lenses into **one strict Combined Strategic Verdict** — the
 single answer to *"is this name on the right side of the AI build-out?"* All four brains
@@ -392,7 +456,7 @@ python3 scripts/conviction.py TICKER
 ### Stage 7 — Persist the decision
 Save the final decision to a per-ticker file **and** append it to the memory log so the next run can learn from it.
 
-1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with a **`Price at analysis: $<close> (<DATE> close)` line** (the verified spot/close from the Stage 1 `snapshot` — the entry-price reference the dashboard parses and marks-to-market against the live price), then the base proposal, macro-adjusted proposal, the `VERDICT FOR NEW INVESTORS:` line, the ratings, **and the forecast block (expected total return + scenarios + P(beats benchmark) + horizon)** so they parse cleanly, followed by the decision summary, key evidence, the plan, and at the end the **`Jensen Brain Verdict:` line**, the **`Leopold Brain Verdict:` line**, the **`Jordi Brain Verdict:` line**, the **`Gavin Brain Verdict:` line**, the **`X Brain Verdict:` line** (the FinTwit sentiment overlay — separate from the four brains), the **`Combined Strategic Verdict:` line** (with its reconciliation sentence), and the **`Decision Facts:` line** (Stage 6.8 — path-to-profit label + the margins/growth/valuation behind it). Use the exact verified close from `snapshot`; if `snapshot` returned `NO_DATA`, omit the price line rather than estimating.
+1. Write the decision to `analyzed-stocks/<TICKER>/<DATE>_decision.md` (repo-relative; create the dir if missing). Start the file with a **`Price at analysis: $<close> (<DATE> close)` line** (the verified spot/close from the Stage 1 `snapshot` — the entry-price reference the dashboard parses and marks-to-market against the live price), then the base proposal, macro-adjusted proposal, the `VERDICT FOR NEW INVESTORS:` line, the ratings, **and the forecast block (expected total return + scenarios + P(beats benchmark) + horizon)** so they parse cleanly, followed by the decision summary, key evidence, the plan, and at the end the **`Jensen Brain Verdict:` line**, the **`Leopold Brain Verdict:` line**, the **`Jordi Brain Verdict:` line**, the **`Gavin Brain Verdict:` line**, the **`X Brain Verdict:` line** (the FinTwit sentiment overlay — separate from the four brains), the **`Industry Brain Verdict:` line** (the primary-source hard-data overlay — also separate from the four brains), the **`Combined Strategic Verdict:` line** (with its reconciliation sentence), and the **`Decision Facts:` line** (Stage 6.8 — path-to-profit label + the margins/growth/valuation behind it). Use the exact verified close from `snapshot`; if `snapshot` returned `NO_DATA`, omit the price line rather than estimating.
 2. Log it **with the forecast probability and horizon** (so it can be Brier-scored at maturity):
 ```
 mkdir -p analyzed-stocks/TICKER
@@ -427,7 +491,8 @@ Present, in this order:
    - **Leopold Brain Verdict** (Stage 6.6): `Leopold Brain Verdict: **Thesis tailwind / Possible / Thesis headwind / Insufficient evidence**` + confidence, 2–4 why-bullets, and 1–3 cited quotes. A qualitative Situational-Awareness-thesis-fit lens.
    - **Jordi Brain Verdict** (Stage 6.65): `Jordi Brain Verdict: **Constructive / Possible / Cautious / Insufficient evidence**` + confidence, 2–4 why-bullets, and 1–3 cited quotes. A qualitative macro / AI-capex / creative-destruction thesis-fit lens.
    - **Gavin Brain Verdict** (Stage 6.66): `Gavin Brain Verdict: **Conviction pick / Possible / Cautious / Insufficient evidence**` + confidence, 2–4 why-bullets, and 1–3 cited quotes. A strict AI-stock-picker (sustaining-vs-disruptive) lens.
-   - **X Brain Verdict** (Stage 6.67): `X Brain Verdict: **Bullish buzz / Mixed / Bearish / Insufficient chatter**` + confidence, 2–4 why-bullets, and 1–3 cited posts. A FinTwit crowd-sentiment + AI-trend overlay — **separate from the four secular brains and NOT part of the Combined Strategic Verdict**; place it after Gavin and before Combined.
+   - **X Brain Verdict** (Stage 6.67): `X Brain Verdict: **Bullish buzz / Mixed / Bearish / Insufficient chatter**` + confidence, 2–4 why-bullets, and 1–3 cited posts. A FinTwit crowd-sentiment + AI-trend overlay — **separate from the four secular brains and NOT part of the Combined Strategic Verdict**; place it after Gavin and before Industry.
+   - **Industry Brain Verdict** (Stage 6.68): `Industry Brain Verdict: **Demand tailwind / Mixed / Demand headwind / Insufficient coverage**` + confidence, 2–4 why-bullets, and 1–3 cited primary-source snippets. The hard-data lens over the `ai-news` corpus — **separate from the four secular brains and NOT part of the Combined Strategic Verdict**; place it after X and before Combined.
    - **Combined Strategic Verdict** (Stage 6.7): `Combined Strategic Verdict: **CONVICTION ALIGNED / ALIGNED / NEUTRAL / CONTESTED / EXPOSED / OFFSIDE / INSUFFICIENT**` derived strictly from the four brains' scores (sign-split ⇒ CONTESTED), followed by the one-to-two-sentence reconciliation with the MACRO-ADJUSTED financial call (and the thin-evidence flag if any brain was Insufficient).
 3. Collapsible/clearly-headed sections for each stage (4 analyst reports incl. the Expected-Return Model → research debate + plan → trader proposal → risk debate → PM decision).
 4. A one-line **data caveat** noting any source that returned no data / fell back, plus the reminder that a multi-year point forecast is uncertain, and the standard not-financial-advice disclaimer.

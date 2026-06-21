@@ -11,7 +11,10 @@
 #                    Gavin Baker appearances & news, incremental key-free YouTube discovery,
 #                    purity-filtered auto-ingest, BM25 rebuild — plus the X Brain: keyless
 #                    FinTwit/AI posts + news lane + research.json/snapshot for the dashboard's
-#                    Research & Changes tabs).
+#                    Research & Changes tabs). THEN the Industry Brain (the hard-data lens):
+#                    ensure_news.py fetches today's primary-source AI/semi news (ai-news
+#                    project), processes the payload, and rebuilds its BM25 index —
+#                    idempotent per day (SKIP if already fetched).
 #   2. Dashboard   — fetch_metrics.py (refresh the per-ticker financials cache) ->
 #                    build_dashboard.py (regenerate dashboard/ HTML from the decision log +
 #                    analyzed-stocks/, incl. the Financials/Changes/Research tabs) ->
@@ -28,8 +31,9 @@
 #   scripts/update_all.sh --analysis-plan  # print tickers still needing today's analysis
 #
 # Env: PYTHON (default python3); plus all update_brains.sh knobs (JENSEN_HOME,
-#      LEOPOLD_HOME, JORDI_HOME, GAVIN_HOME, X_HOME, NITTER_INSTANCES, DISCOVER_SINCE, …)
-#      and TRADINGAGENTS_MEMORY_LOG_PATH.
+#      LEOPOLD_HOME, JORDI_HOME, GAVIN_HOME, X_HOME, NITTER_INSTANCES, DISCOVER_SINCE, …),
+#      AINEWS_HOME (the ai-news project for the Industry Brain, default
+#      /home/ewexler/projects/ai-news), and TRADINGAGENTS_MEMORY_LOG_PATH.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -68,6 +72,19 @@ step() { echo; echo "######## $* ########"; }
 if [ "$DO_BRAINS" = 1 ]; then
   step "1/3  BRAINS (news + YouTube discovery + auto-ingest + index)"
   bash "$ROOT/scripts/update_brains.sh" both || echo "  [warn] update_brains.sh reported a problem"
+
+  # Industry Brain (the hard-data lens): fetch today's primary-source AI/semi news,
+  # process the payload, and rebuild the ai-news BM25 index. Idempotent per day via
+  # ensure_news.py (SKIP if already fetched today). Network step — degrades gracefully
+  # offline (the Industry Brain keeps using the last index).
+  ENSURE_NEWS="$ROOT/.claude/skills/trading-analysis/scripts/ensure_news.py"
+  if [ -f "$ENSURE_NEWS" ]; then
+    echo
+    echo "-- Industry Brain (ai-news: fetch + process + reindex, idempotent per day) --"
+    ( cd "$ROOT" && "$PY" "$ENSURE_NEWS" ) || echo "  [warn] ensure_news failed (offline?) — Industry Brain uses last index"
+  else
+    echo "  [skip] ensure_news.py not found — Industry Brain not refreshed"
+  fi
 fi
 
 if [ "$DO_DASH" = 1 ]; then

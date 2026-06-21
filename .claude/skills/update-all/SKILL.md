@@ -1,6 +1,6 @@
 ---
 name: update-all
-description: One command to refresh the DATA artifacts of the TradingAgents project — all five lenses' corpora + indexes (Jensen NVIDIA news, Leopold Situational-Awareness essay, Jordi @JordiVisserLabs channel, Gavin Baker appearances, and the keyless X Brain FinTwit/AI posts + news + Research data), the HTML decision dashboard (incl. the Changes & Research tabs), the forecast-calibration scorecard, AND automatically runs the `/ai-cycle-watch` skill to log the latest macro phase. Does NOT run per-ticker /trading-analysis (that's an on-demand LLM step you run separately). Use when the user says "/update-all", "/update", "update everything", "refresh everything", "run the update", or wants all brains + dashboard + calibration brought current in one shot.
+description: One command to refresh the DATA artifacts of the TradingAgents project — all five lenses' corpora + indexes (Jensen NVIDIA news, Leopold Situational-Awareness essay, Jordi @JordiVisserLabs channel, Gavin Baker appearances, and the keyless X Brain FinTwit/AI posts + news + Research data), PLUS the Industry Brain (primary-source AI/semi news from the ai-news project — SemiAnalysis, Fabricated Knowledge, Epoch AI, … — fetched, processed, and BM25-reindexed), the HTML decision dashboard (incl. the Changes & Research tabs), the forecast-calibration scorecard, AND automatically runs the `/ai-cycle-watch` skill to log the latest macro phase. Does NOT run per-ticker /trading-analysis (that's an on-demand LLM step you run separately). Use when the user says "/update-all", "/update", "update everything", "refresh everything", "run the update", or wants all brains + dashboard + calibration brought current in one shot.
 ---
 
 # Update Everything (update-all)
@@ -27,8 +27,9 @@ scripts/update_all.sh --brains-only
 ```
 
 Honors all `update_brains.sh` env knobs (`JENSEN_HOME`, `LEOPOLD_HOME`, `JORDI_HOME`,
-`GAVIN_HOME`, `X_HOME`, `NITTER_INSTANCES`, `DISCOVER_SINCE`, `DISCOVER_QUERIES`) and
-`TRADINGAGENTS_MEMORY_LOG_PATH`.
+`GAVIN_HOME`, `X_HOME`, `NITTER_INSTANCES`, `DISCOVER_SINCE`, `DISCOVER_QUERIES`),
+`AINEWS_HOME` (the ai-news project for the Industry Brain, default
+`/home/ewexler/projects/ai-news`), and `TRADINGAGENTS_MEMORY_LOG_PATH`.
 
 ## What it does (4 steps)
 
@@ -44,6 +45,11 @@ Honors all `update_brains.sh` env knobs (`JENSEN_HOME`, `LEOPOLD_HOME`, `JORDI_H
    its index, and recomputes/snapshots `research.json` (powers the dashboard's **Research** &
    **Changes** tabs). New passages go live immediately in `/trading-analysis` and every
    `/*-brain` skill. See [`scripts/UPDATE_BRAINS.md`](../../../scripts/UPDATE_BRAINS.md).
+   **THEN the Industry Brain (the hard-data lens):** `ensure_news.py` fetches today's
+   primary-source AI/semiconductor news (the `ai-news` project — SemiAnalysis, Fabricated
+   Knowledge, Epoch AI, Next Platform, DCD, …), processes the pillar-tagged payload, and
+   rebuilds the BM25 index — **idempotent per day** (SKIP if already fetched). Network step;
+   offline it warns and the Industry Brain keeps using the last index.
 2. **Macro Cycle Update** — The AI (you) must automatically execute the `/ai-cycle-watch` skill for the current date to update the overarching macro phase, valuation heatmaps, and hedge targets. This ensures the macro defense layer is generated using the freshest possible brain data.
 3. **Dashboard** — `scripts/build_dashboard.py`: regenerate `dashboard/` HTML (per-decision
    pages + index + best-call leaderboards + **🔔 Changes** and **🔬 Research** tabs) from the
@@ -56,6 +62,8 @@ Honors all `update_brains.sh` env knobs (`JENSEN_HOME`, `LEOPOLD_HOME`, `JORDI_H
 ## After running, report
 - **Brains:** per brain, before→after chunk count + anything auto-ingested / parked
   (`pending_<brain>.tsv`) / rejected (`work/discover_rejects.log`).
+- **Industry Brain:** the `ensure_news.py` `STATUS:` (SKIP / FETCH / NO_BACKFILL), the
+  `RECENT WINDOW` of days with data, and the corpus size after reindex.
 - **Dashboard:** regenerated; surface the **Changes-tab headline** (flips / metric moves /
   new names / X-research shifts) so the user sees what moved since the last run.
 - **Calibration:** matured-but-unresolved forecasts (call them out) + headline Brier/alpha.

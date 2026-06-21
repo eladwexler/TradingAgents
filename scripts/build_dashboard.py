@@ -304,6 +304,7 @@ def parse_decision(path):
     d["jordi"] = grab(r"Jordi Brain Verdict:\s*\**\s*([A-Za-z ]+?)\**\s*[(\-—\n]", md)
     d["gavin"] = grab(r"Gavin Brain Verdict:\s*\**\s*([A-Za-z ]+?)\**\s*[(\-—\n]", md)
     d["x"] = grab(r"X Brain Verdict:\s*\**\s*([A-Za-z ]+?)\**\s*[(\-—\n]", md)
+    d["industry"] = grab(r"Industry Brain Verdict:\s*\**\s*([A-Za-z ]+?)\**\s*[(\-—\n]", md)
     d["combined"] = grab(r"Combined Strategic Verdict:\s*\**\s*([A-Z ]+?)\**\s*[(\-—\.\n]", md)
     # price recorded at analysis time (entry reference) — "Price at analysis: $123.45 …"
     d["price_at"] = grab(r"Price at analysis[:\s]*\**\s*\$?\s*([\d,]+(?:\.\d+)?)", md)
