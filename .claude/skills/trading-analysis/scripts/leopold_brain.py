@@ -3,7 +3,9 @@
 
 Queries the "Leopold brain" — a BM25 index over Leopold Aschenbrenner's own words
 (the *Situational Awareness: The Decade Ahead* essay + his long-form interviews,
-built in the companion `leopold-brain` project) — and returns the passages a reader
+plus his fund's disclosed SEC 13F positioning — Situational Awareness LP, what it is
+actually long vs short-via-puts — built in the companion `leopold-brain` project) —
+and returns the passages a reader
 needs to judge whether a company sits **with or against the Situational Awareness
 thesis**: AGI by ~2027 via straight-line compute scaling, the intelligence explosion,
 the trillion-dollar cluster, *power/electricity as the binding constraint*, chips/fabs,
@@ -52,9 +54,14 @@ def load_search_module(home):
 
 
 def src_tag(d):
-    """Label a hit by provenance: the canonical essay vs a spoken interview."""
+    """Label a hit by provenance: the canonical essay, a spoken interview, or the
+    fund's disclosed 13F positioning (what Leopold is actually long/short)."""
     s = d.get("source", "essay")
-    return "ESSAY" if s == "essay" else f"INTERVIEW ({d.get('channel','')[:24]})"
+    if s == "essay":
+        return "ESSAY"
+    if s == "13f":
+        return "13F HOLDINGS (Situational Awareness LP)"
+    return f"INTERVIEW ({d.get('channel','')[:24]})"
 
 
 def emit(title, hits, empty="(no matching passages — corpus may not cover this directly)"):

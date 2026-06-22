@@ -5,7 +5,8 @@
 #   Jensen Brain  = what Jensen *said* (YouTube transcripts) + what NVIDIA *did*
 #                   (press + blog RSS — the time-stamped "news/actions" lane).
 #   Leopold Brain = what Leopold *wrote* (Situational Awareness essay) + *said*
-#                   (long-form interview transcripts).
+#                   (long-form interview transcripts) + how he's *positioned*
+#                   (Situational Awareness LP 13F holdings from SEC EDGAR — long/short).
 #   Jordi Brain   = what Jordi Visser *said* (every @JordiVisserLabs YouTube video) +
 #                   a keyless news lane. Single owned channel, so no purity filter needed.
 #   Gavin Brain   = what Gavin Baker *said* (long-form guest appearances — BG2, Invest
@@ -80,6 +81,8 @@ update_leopold() {
   ( cd "$LEOPOLD_HOME" && "$PY" work/discover_new.py ) || echo "  [warn] discovery skipped (yt-dlp missing / offline?)"
   echo "-- auto-ingest purity-approved videos (auto_leopold.tsv) --"
   ( cd "$LEOPOLD_HOME" && "$PY" work/ingest_pending.py ) || echo "  [warn] auto-ingest failed"
+  echo "-- refresh Situational Awareness LP 13F holdings from SEC EDGAR (what Leopold is long/short; idempotent per quarter) --"
+  ( cd "$LEOPOLD_HOME" && "$PY" work/fetch_13f.py ) || echo "  [warn] 13F fetch failed (offline / SEC throttle?)"
   echo "-- rebuild index --"
   ( cd "$LEOPOLD_HOME" && "$PY" index/build_index.py )
   echo "   chunks: $before -> $(chunks "$LEOPOLD_HOME")"

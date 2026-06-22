@@ -117,6 +117,7 @@
     <button class="tabbtn" onclick="showTab('tab-verdicts',this)">📋 All verdicts</button>
     <button class="tabbtn" onclick="showTab('tab-financials',this)">📐 Financials</button>
     <button class="tabbtn" onclick="showTab('tab-research',this)">🔬 Research (X)</button>
+    <button class="tabbtn" onclick="showTab('tab-news',this)">🗞️ News</button>
     <button class="tabbtn" onclick="showTab('tab-reversals',this)">{{REVERSALS_TAB}}</button>
     <button class="tabbtn" onclick="showTab('tab-changes',this)">{{CHANGES_TAB}}</button>
   </nav>
@@ -234,6 +235,11 @@
   <section class="tabpanel" id="tab-research">
   <h2>X Research <span class="muted" style="text-transform:none;font-weight:400">· what FinTwit/AI is talking about — hot AI trends &amp; the most-bullish names (keyless X Brain corpus)</span></h2>
   {{RESEARCH}}
+  </section>
+
+  <section class="tabpanel" id="tab-news">
+  <h2>News <span class="muted" style="text-transform:none;font-weight:400">· dated, human-readable recap of bullish news referencing specific stocks — plus inferred beneficiaries (tracked + new candidates)</span></h2>
+  {{NEWS}}
   </section>
 
   <section class="tabpanel" id="tab-reversals">

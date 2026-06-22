@@ -103,6 +103,12 @@ if [ "$DO_DASH" = 1 ]; then
   if [ -f "$ROOT/scripts/conviction.py" ]; then
     ( cd "$ROOT" && "$PY" scripts/conviction.py >/dev/null ) || echo "  [warn] conviction scoring failed"
   fi
+  # build the 🗞️ News-tab feed (dated bullish stock-referencing news + new
+  # candidates) from the freshly-refreshed X Brain news lane + ai-news industry
+  # desk; the dashboard reads dashboard/data/news_feed.json. Deterministic.
+  if [ -f "$ROOT/scripts/build_news_feed.py" ]; then
+    ( cd "$ROOT" && "$PY" scripts/build_news_feed.py ) || echo "  [warn] news-feed build failed"
+  fi
   if [ -f "$ROOT/scripts/build_dashboard.py" ]; then
     ( cd "$ROOT" && "$PY" scripts/build_dashboard.py ) || echo "  [warn] dashboard rebuild failed"
     echo "  -> open $ROOT/dashboard/index.html"
