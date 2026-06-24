@@ -59,6 +59,33 @@ Score each as **Green** (boom intact) / **Amber** (stress building) / **Red** (r
 11. **Insider Selling & Smart Money** — C-suite/10% owner selling in the "survivors" basket (NVDA, MSFT, AVGO). Spikes > 2x trailing average = Red.
 12. **Application Layer ROI Canary** — Run `ta_macro_data.py software_canary`. If average YoY revenue growth of the software basket drops below 20% while Infrastructure Capex (#1) is still growing, this is a structural fracture = Red.
 
+## The Bottleneck Cascade (the mechanism of re-rating)
+
+The AI buildout is a sequence of **binding constraints**. When a resource becomes scarce relative to a $700B+ annual spend, the company that owns it captures outsized pricing power, backlog visibility, and narrative dominance simultaneously — fundamentals look great *because of* the bottleneck, not independently of it. The stock re-rates to price in that rent. Then the bottleneck shifts, and so does the re-rating.
+
+This is more important than any valuation multiple. A company AT the current bottleneck will always look expensive on trailing P/S — that is the point. A company PAST the bottleneck will look cheap while its rent disappears.
+
+**The cascade so far and ahead:**
+
+| Node | Status | Owners | Shift signal to watch |
+|---|---|---|---|
+| Training compute / GPUs | EASING — Blackwell supply ramping | NVDA | H100/B200 spot prices falling |
+| HBM memory | ACTIVE | MU, SK Hynix | CXMT supply online; HBM spot softens |
+| Networking / interconnect | ACTIVE | AVGO, ANET, CRDO | Lead times ease; merchant silicon catches up |
+| Custom silicon / ASICs | ACTIVE | AVGO, MRVL | When hyperscalers buy commodity ASICs, not custom |
+| Power / electricity | ACTIVE — lengthening | CEG, VRT, ETN, GEV | Transformer lead times drop below ~52 weeks |
+| Data-center construction | ACTIVE — second-order | PWR, STRL, MTZ | When order books thin |
+| Application / agent layer | **NOT A BOTTLENECK YET** | — | 88% of pilots fail; ROI unproven at scale |
+| Inference / edge compute | Pre-bottleneck (2027+?) | TBD | When agents are in production and inference cost is the limit |
+
+**Three positions — score every watchlist name into one:**
+
+- **AT** — owns an active bottleneck node. Re-rating in progress. Pricing power + backlog + news flow aligned. The primary framework for evaluating these names is bottleneck duration and rent sustainability, NOT current P/S.
+- **PRE** — positioned at the NEXT bottleneck but it has not activated. Optionality bet. Rich multiples here are pricing an arrival that may be 2–3 years out. Do not confuse "growing" with "bottleneck."
+- **PAST** — owned a previous bottleneck now easing/commoditizing. Multiple compression risk as rent disappears. Requires a new catalyst or moat to hold the re-rating.
+
+**Critical honesty rule:** The application layer is currently PRE — not AT. Software companies growing 30–80% YoY are benefiting from the buildout, not constraining it. The bottleneck shifts to the application layer only when: (a) agents are in wide production replacing real workflows, (b) the scarce resource is software/model capability rather than compute/power, and (c) enterprise ROI is publicly validated at scale. None of those are true yet.
+
 ## The baskets (default watchlist)
 
 - **Structural beneficiaries:** NVDA (toll booth, but priced rich), TSMC (makes everyone's chips), power/electrical (VST, GEV, ETN, NEE, IPPs, nuclear/SMR), HBM/memory (MU, SK Hynix), networking/optical (AVGO, ANET, COHR), hyperscalers with distribution (MSFT, GOOGL, AMZN, META).
@@ -83,6 +110,16 @@ For each of the 12 canaries, gather the latest reading. Run `ta_macro_data.py` c
 
 ### Stage 2 — Score the board
 Produce a Green/Amber/Red table of all 12 indicators with the one-line evidence for each. You MUST respect the strict numerical thresholds defined above for the macro and valuation indicators. Weight #1 (hyperscaler capex) and #2 (GPU rentals) most heavily.
+
+### Stage 2.5 — Map the Bottleneck Cascade
+Using the cascade table above as the template, produce the current snapshot:
+- For each node: update its status (EASING / ACTIVE / NOT YET) from the live indicator readings in Stage 1.
+- Identify which node is the **primary active bottleneck** right now (the one with the tightest supply/demand and the clearest rent extraction).
+- Identify which node is **next** — and be honest if it is not yet a bottleneck (do not promote PRE to AT).
+- Score every ticker in the user's watchlist (or the default baskets) as **AT / PRE / PAST** with a one-line reason.
+- Note any **shift signals** that are appearing in the data (e.g., GPU spot prices softening = GPU node moving from ACTIVE → EASING).
+
+This section must appear in the written report before Survivor/Casualty. It is the primary context for interpreting every stock score.
 
 ### Stage 3 — Locate the phase + timeline
 From the scored board, place the center of gravity on the phase map and give a **timeline window with its error bar**, distinguishing:
@@ -112,11 +149,12 @@ python3 .claude/skills/trading-analysis/scripts/ta_memory.py log_cycle <DATE> \
 
 1. **Stance** up top: one line — current phase, net indicator color, correction window + error bar.
 2. **Indicator scoreboard** — the 12-row Green/Amber/Red table with dated evidence.
-3. **Phase + timeline** — where we are, sentiment-vs-structural distinction, the sequence to position for.
-4. **Survivor / casualty** — two short lists (or scored watchlist), with the one-reason-each.
-5. **Data caveat + disclaimer** — note any Unknown indicators / sources that returned nothing, and the standard not-financial-advice line.
-6. **Idiot Investor Summary (Jensen's Take)** — A summary clause at the very end giving the true risk score 0-100 of the "current risk per AI cake". Explain the score in really simple, plain English (idiot-proof) but keep a SERIOUS and professional tone. Adopt Jensen Huang's perspective: frame the AI build-out as a massive "AI cake" (total addressable market/opportunity) where the shift to accelerated computing and "AI factories" is a mandatory industrial revolution. Do not use silly baking metaphors; simply explain the serious underlying infrastructure reality versus the macro noise.
-7. **[HEDGE_CANDIDATES]** — A machine-readable JSON block containing 3-5 high-conviction short targets drawn from the Casualties list (e.g., leveraged neoclouds, over-valued wrappers). Format: ````json [ { "ticker": "...", "reason": "..." } ] ````. This will be ingested by the Portfolio Manager skill for pairs trades.
+3. **Bottleneck Cascade Map** — the cascade table (node / status / owners / shift signal) updated from live readings, followed by each watchlist ticker scored AT / PRE / PAST with one-line reason. This is the primary lens for infrastructure names — it supersedes P/S multiples as the re-rating frame.
+4. **Phase + timeline** — where we are, sentiment-vs-structural distinction, the sequence to position for.
+5. **Survivor / casualty** — two short lists (or scored watchlist), with the one-reason-each.
+6. **Data caveat + disclaimer** — note any Unknown indicators / sources that returned nothing, and the standard not-financial-advice line.
+7. **Idiot Investor Summary (Jensen's Take)** — A summary clause at the very end giving the true risk score 0-100 of the "current risk per AI cake". Explain the score in really simple, plain English (idiot-proof) but keep a SERIOUS and professional tone. Adopt Jensen Huang's perspective: frame the AI build-out as a massive "AI cake" (total addressable market/opportunity) where the shift to accelerated computing and "AI factories" is a mandatory industrial revolution. Do not use silly baking metaphors; simply explain the serious underlying infrastructure reality versus the macro noise.
+8. **[HEDGE_CANDIDATES]** — A machine-readable JSON block containing 3-5 high-conviction short targets drawn from the Casualties list (e.g., leveraged neoclouds, over-valued wrappers). Format: ````json [ { "ticker": "...", "reason": "..." } ] ````. This will be ingested by the Portfolio Manager skill for pairs trades.
 
 ## Notes & failure modes
 - Data deps for `ta_data.py`: `pip install -r .claude/skills/trading-analysis/scripts/requirements.txt` (no keys) if a `ModuleNotFoundError` appears.
