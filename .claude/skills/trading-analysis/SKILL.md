@@ -135,13 +135,23 @@ It returns, for the name's current **price-factor profile** (12-1 momentum × dr
 - Your **bear/base/bull span** should be **at least as wide as the anchor's P25–P75 band** — the empirical dispersion is large; a narrow scenario range is the tell of false confidence.
 - The anchor is a **humility check, not a forecast or a signal**. If your decomposition lands at a confident +40%/P(beat) 0.75 while the anchor says coin-flip with a ±30% band, the *decomposition* is probably over-optimistic — reconcile explicitly and say what specifically justifies leaving the base rate.
 
+#### Bottleneck Cascade lens (apply before the return model for any infrastructure name)
+
+Check the latest `ai-cycle-reports/*_cycle.md` Bottleneck Cascade table and classify the ticker as **AT / PRE / PAST** before you touch a valuation multiple. This classification changes the re-rating frame entirely — EV/Sales or P/S as the primary filter is a **blunt instrument** during a historic infrastructure re-rating and systematically misfires in both directions:
+
+- **AT (active bottleneck):** The company owns the scarce resource the $700B+/yr buildout is currently constrained by. Pricing power, backlog visibility, and narrative dominance are simultaneously aligned. The correct re-rating frame is **bottleneck duration and rent sustainability** — NOT where P/S sits vs history. For an AT name, multiple *expansion* is the base case as long as the rent is alive. Applying standard "compression is the default" here produces a structurally bearish answer that the data will continue to disprove. Do not default to compression; justify any compression explicitly against evidence that the rent is ending.
+
+- **PRE (next bottleneck, not yet active):** This is the **highest-alpha setup in the cycle** — owning the constraint *before* the market prices the activation. Evaluate on three axes: (a) **time-to-activation** (how many quarters before this node becomes binding — the longer, the more discount is appropriate), (b) **moat quality at activation** (IP, manufacturing scale, switching costs — a weak moat at activation means the rent is competed away quickly), and (c) **what the price already reflects** (a PRE name priced as if it's already AT has compressed the upside; a PRE name priced as a commodity has maximum upside at activation). The bear case for PRE is always "the bottleneck never activates / activates later than expected / someone else owns it." Size accordingly — PRE names warrant a smaller, earlier entry than AT names.
+
+- **PAST (bottleneck easing/commoditizing):** The rent is disappearing. Multiple compression is the correct base case here, regardless of strong trailing growth. Require a specific new catalyst or moat extension to override compression — past backlog or revenue trajectory is not sufficient.
+
 #### The Expected-Return Model (required — this produces the forecast)
 Decompose expected annualized return over the horizon into the **three sources of long-run equity return**, for three scenarios (bear / base / bull):
 
 > **Total return ≈ (earnings or FCF growth) + (multiple re-rating) + (shareholder yield)**
 
 - **Growth**: annualized revenue/EPS/FCF growth you actually believe — anchor on consensus from `forward`, then *haircut for optimism bias* and the AI-cycle phase. State your number and why it differs from consensus.
-- **Multiple re-rating**: where the P/E (or EV/S for pre-profit) is today vs. a defensible terminal multiple at the horizon. High-multiple names should usually carry **multiple compression** in the base case even with strong growth — make this explicit; it's the #1 thing valuation-blind momentum theses miss.
+- **Multiple re-rating**: where the P/E (or EV/S for pre-profit) is today vs. a defensible terminal multiple at the horizon. **The default assumption depends on Bottleneck Cascade position** (see above): AT names → expansion/hold in base case; PRE names → modest expansion if activation timing is plausible; PAST names and everything outside the cascade → compression is the default and must be stated explicitly. Never apply "compression is the #1 thing to make explicit" universally — it is only true for names that are not AT or PRE an active constraint.
 - **Yield**: dividend + net buyback.
 
 Combine into **bear / base / bull total-return paths to the horizon**, assign rough probabilities, and from those derive: the **expected total return**, the **P(beats benchmark)**, and the implied **5-tier rating**. The benchmark's own expected return over the horizon (~6–8%/yr for SPY as a default anchor, state your assumption) is the hurdle for alpha. **Reconcile the result with the Step-A base-rate anchor in one explicit sentence** — state the anchor's median excess + P(beat), your forecast's, and the *named, non-consensus* reason for any gap. If you can't name one, move your forecast back toward the anchor.
@@ -172,6 +182,8 @@ Run `max_risk_discuss_rounds` rounds (default 1) over the trader's proposal:
 
 ### Stage 6 — Portfolio Manager → final decision + calibrated forecast
 Synthesize the risk debate, the Expected-Return Model, **and any recalled past lessons** into a **Base Decision** (bottom-up). Then factor in the **Macro Phase / Stance** from the latest `ai-cycle-reports` (Stage 0) for a **Macro-Adjusted Decision**: if the cycle is in Late Phase 2 or Phase 3, haircut growth and apply more multiple compression — heavily penalize high-leverage infrastructure or AI wrappers to enforce top-down risk management on the bottom-up pick.
+
+**Bottleneck Cascade position must appear in the final verdict.** State it explicitly (AT / PRE / PAST) and let it govern the multiple re-rating assumption. The highest-conviction opportunity at any point in the cycle is a **PRE-bottleneck name that the market is still pricing as a commodity** — if you identify one, it warrants a higher P(beat) deviation from the base rate than an AT name (which the market is already partially aware of). Call this out explicitly when it applies.
 
 **CRITICAL HEDGE CHECK:** Check if the ticker being analyzed appears in the `[HEDGE_CANDIDATES]` JSON block of the latest cycle report. If it does, automatically flag it as a HIGH-VULNERABILITY SHORT TARGET, forbid a "Buy" rating, and explicitly state that it was flagged by the macro cycle as a casualty.
 
