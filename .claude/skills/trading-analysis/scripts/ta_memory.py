@@ -125,18 +125,19 @@ class DecisionLog:
     # --- write ---
     def store_decision(self, ticker: str, trade_date: str, decision: str,
                        prob: Optional[float] = None,
-                       horizon_months: Optional[int] = None) -> bool:
-        """Append a pending entry. Idempotent on (date, ticker). Returns False if dup.
+                       horizon_months: Optional[int] = None) -> str:
+        """One pending entry per ticker. Returns 'new', 'replaced <old_date>', or 'unchanged'.
+
+        If a pending entry already exists for this ticker on the same date, it is left
+        unchanged. If it exists on a different date, the old entry is replaced in-place
+        with the new analysis (one pending call per ticker at a time). This keeps the
+        calibration log clean — re-analyzing a ticker updates your view rather than
+        inflating the sample count.
 
         ``prob`` is P(beats benchmark over the horizon) and ``horizon_months`` is
         the forecast horizon — both stored as ``key=value`` tokens so the
         prediction can be scored for calibration once it resolves.
         """
-        prefix = f"[{trade_date} | {ticker} |"
-        if self.path.exists():
-            for line in self.path.read_text(encoding="utf-8").splitlines():
-                if line.startswith(prefix) and "| pending" in line:
-                    return False
         rating = parse_rating(decision)
         tag = f"[{trade_date} | {ticker} | {rating} | pending"
         if prob is not None:
@@ -144,9 +145,43 @@ class DecisionLog:
         if horizon_months:
             tag += f" | H={horizon_months}mo"
         tag += "]"
+        new_entry = f"{tag}\n\nDECISION:\n{decision}"
+
+        if not self.path.exists():
+            with open(self.path, "a", encoding="utf-8") as f:
+                f.write(new_entry + _SEPARATOR)
+            return "new"
+
+        text = self.path.read_text(encoding="utf-8")
+        blocks = text.split(_SEPARATOR)
+        for i, block in enumerate(blocks):
+            s = block.strip()
+            if not s:
+                continue
+            lines = s.splitlines()
+            tline = lines[0].strip()
+            if not (tline.startswith("[") and tline.endswith("]")):
+                continue
+            fields = [f.strip() for f in tline[1:-1].split("|")]
+            # fields: [date, ticker, rating, status_or_raw, ...]
+            # key=value tokens (P=, H=) also appear as fields but contain "="
+            pos = [f for f in fields if "=" not in f]
+            if len(pos) < 4 or pos[1] != ticker or pos[3] != "pending":
+                continue
+            old_date = pos[0]
+            if old_date == trade_date:
+                return "unchanged"
+            # Different date: replace in-place so only one pending entry exists per ticker.
+            blocks[i] = new_entry
+            tmp = self.path.with_suffix(".tmp")
+            tmp.write_text(_SEPARATOR.join(blocks), encoding="utf-8")
+            tmp.replace(self.path)
+            return f"replaced {old_date}"
+
+        # No existing pending entry for this ticker — append.
         with open(self.path, "a", encoding="utf-8") as f:
-            f.write(f"{tag}\n\nDECISION:\n{decision}{_SEPARATOR}")
-        return True
+            f.write(new_entry + _SEPARATOR)
+        return "new"
 
     # --- read ---
     def load_entries(self) -> List[dict]:
@@ -404,17 +439,20 @@ def cmd_log(args, log: DecisionLog) -> None:
         print("ERROR: --prob must be a probability in [0,1]", file=sys.stderr)
         raise SystemExit(2)
     rating = parse_rating(decision)
-    wrote = log.store_decision(args.ticker, args.trade_date, decision,
-                               prob=args.prob, horizon_months=args.horizon_months)
+    status = log.store_decision(args.ticker, args.trade_date, decision,
+                                prob=args.prob, horizon_months=args.horizon_months)
     extra = ""
     if args.prob is not None:
         extra += f" | P={args.prob:.2f}"
     if args.horizon_months:
         extra += f" | H={args.horizon_months}mo"
-    if wrote:
+    if status == "new":
         print(f"Logged [{args.trade_date} | {args.ticker} | {rating} | pending{extra}] -> {log.path}")
-    else:
+    elif status == "unchanged":
         print(f"Already logged (pending) for {args.trade_date} | {args.ticker}; left unchanged.")
+    else:
+        old_date = status.replace("replaced ", "")
+        print(f"Updated [{args.ticker}]: replaced {old_date} entry with {args.trade_date} [{rating}] -> {log.path}")
 
 
 def cmd_log_cycle(args, log: DecisionLog) -> None:
@@ -585,6 +623,60 @@ def _rating_stance(rating: str) -> int:
     return 0
 
 
+def cmd_dedup(args, log: DecisionLog) -> None:
+    """Remove duplicate pending entries — keep only the most recent pending entry per ticker.
+
+    Run this once to clean an existing log that accumulated duplicates from repeated
+    analyses of the same ticker on different dates. Going forward, ``log`` is idempotent
+    per ticker and no manual dedup is needed.
+    """
+    if not log.path.exists():
+        print("(log file does not exist — nothing to dedup)")
+        return
+
+    text = log.path.read_text(encoding="utf-8")
+    blocks = text.split(_SEPARATOR)
+
+    # Collect pending entries per ticker: ticker -> [(date, block_index)]
+    pending_by_ticker: dict = {}
+    for i, block in enumerate(blocks):
+        s = block.strip()
+        if not s:
+            continue
+        lines = s.splitlines()
+        tline = lines[0].strip()
+        if not (tline.startswith("[") and tline.endswith("]")):
+            continue
+        fields = [f.strip() for f in tline[1:-1].split("|")]
+        pos = [f for f in fields if "=" not in f]
+        if len(pos) < 4 or pos[3] != "pending":
+            continue
+        ticker, date = pos[1], pos[0]
+        pending_by_ticker.setdefault(ticker, []).append((date, i))
+
+    to_remove: set = set()
+    for ticker, entries in sorted(pending_by_ticker.items()):
+        if len(entries) <= 1:
+            continue
+        entries_sorted = sorted(entries, key=lambda x: x[0])
+        keep_date = entries_sorted[-1][0]
+        for date, idx in entries_sorted[:-1]:
+            to_remove.add(idx)
+            print(f"  Removing {ticker} @ {date}  (keeping {keep_date})")
+
+    if not to_remove:
+        total = sum(len(v) for v in pending_by_ticker.values())
+        print(f"No duplicates found ({total} pending entries, all unique tickers).")
+        return
+
+    new_blocks = [b for i, b in enumerate(blocks) if i not in to_remove]
+    tmp = log.path.with_suffix(".tmp")
+    tmp.write_text(_SEPARATOR.join(new_blocks), encoding="utf-8")
+    tmp.replace(log.path)
+    remaining = sum(1 for b in new_blocks if b.strip())
+    print(f"\nRemoved {len(to_remove)} duplicate(s). {remaining} entries remain. Log rewritten -> {log.path}")
+
+
 def cmd_watch(args, log: DecisionLog) -> None:
     """Flag OPEN (pending) calls whose interim mark has drifted against the thesis.
 
@@ -654,6 +746,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("recall", help="print past lessons for a ticker (inject at start of analysis)")
     s.add_argument("ticker"); s.set_defaults(func=cmd_recall)
+
+    s = sub.add_parser("dedup", help="remove duplicate pending entries, keeping only the most recent per ticker")
+    s.set_defaults(func=cmd_dedup)
 
     s = sub.add_parser("log", help="append a pending decision entry (with forecast P + horizon)")
     s.add_argument("ticker"); s.add_argument("trade_date")
