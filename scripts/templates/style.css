@@ -74,6 +74,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .callout{background:var(--panel2);border:1px solid var(--border);border-left:3px solid var(--accent);
   border-radius:8px;padding:14px 16px;margin:14px 0}
 .callout .k{color:var(--accent);font-size:12px;text-transform:uppercase;font-weight:700;margin-bottom:4px}
+.entry-callout{border-left-color:#d29922}
+.entry-callout .k{color:#d29922}
 .body{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:6px 22px 18px;margin-top:18px}
 .body h1{font-size:20px}.body h2{font-size:15px;color:var(--txt);text-transform:none;letter-spacing:0}
 .body h3{font-size:14px;color:var(--muted)}

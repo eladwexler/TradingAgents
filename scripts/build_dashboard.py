@@ -320,6 +320,9 @@ def parse_decision(path):
     d["combined"] = grab(r"Combined Strategic Verdict:\s*\**\s*([A-Z ]+?)\**\s*[(\-—\.\n]", md)
     # price recorded at analysis time (entry reference) — "Price at analysis: $123.45 …"
     d["price_at"] = grab(r"Price at analysis[:\s]*\**\s*\$?\s*([\d,]+(?:\.\d+)?)", md)
+    # better-entry / add zone — structured "ENTRY ZONE: $X–$Y (context)"
+    ez = grab(r"\*{0,2}ENTRY ZONE:\s*\*{0,2}\s*(.+?)\*{0,2}\s*$", md, flags=re.I | re.M)
+    d["entry_zone"] = ez.rstrip("* ") if ez else ""
     d["forecast"] = parse_forecast(md)
     return d
 
@@ -1595,6 +1598,11 @@ def main():
             "{{GAVIN}}": r["gavin"] or "n/a", "{{GAVIN_CLS}}": cls_brain(r["gavin"]),
             "{{X}}": r["x"] or "n/a", "{{X_CLS}}": cls_x(r["x"]),
             "{{COMBINED}}": r["combined"] or "n/a", "{{COMBINED_CLS}}": cls_combined(r["combined"]),
+            "{{ENTRY_ZONE_BOX}}": (
+                f'<div class="callout entry-callout"><div class="k">Better entry / add zone</div>'
+                f'{html.escape(r["entry_zone"])}</div>'
+                if r.get("entry_zone") else ""
+            ),
             "{{VERDICT_NEW}}": inline(r["verdict_new"]) if r["verdict_new"] else '<span class="muted">—</span>',
             "{{FORECAST_TABLE}}": forecast_html(r["forecast"]),
             "{{METRICS_BOX}}": metrics_box(metrics.get(r["ticker"])),
