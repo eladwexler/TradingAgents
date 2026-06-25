@@ -120,11 +120,32 @@
     <button class="tabbtn" onclick="showTab('tab-news',this)">🗞️ News</button>
     <button class="tabbtn" onclick="showTab('tab-reversals',this)">{{REVERSALS_TAB}}</button>
     <button class="tabbtn" onclick="showTab('tab-changes',this)">{{CHANGES_TAB}}</button>
+    <a class="tabbtn" href="jensen.html" style="text-decoration:none;padding:8px 16px">🧠 Jensen Brain</a>
   </nav>
 
   <section class="tabpanel active" id="tab-overview">
   <h2>Track record</h2>
   <div class="cards">{{SUMMARY_CARDS}}</div>
+
+  <h2>Secular lenses</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin:0 0 28px">
+    <a href="jensen.html" style="text-decoration:none">
+      <div style="background:#161b22;border:1px solid #2d3643;border-radius:12px;padding:16px 18px;
+           display:flex;gap:14px;align-items:flex-start;cursor:pointer;transition:border-color .15s"
+           onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#2d3643'">
+        <div style="font-size:32px;line-height:1">🧠</div>
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#e6edf3;margin-bottom:4px">Jensen Brain — Endorsement Map</div>
+          <div style="font-size:12px;color:#8b98a5;line-height:1.5">25+ stocks ranked across 6 tiers by how strongly Jensen Huang endorsed them — from NVDA-invested companies (MRVL $2B, COHR $2B, CRWV, NBIS, INTC) to supply-chain dependencies and passing mentions. 5,131 corpus chunks.</div>
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#2ea04322;border:1px solid #2ea04366;color:#2ea043">T1 · NVDA-Invested</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#1f6feb22;border:1px solid #1f6feb66;color:#58a6ff">T2 · Platform Partners</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#d2992218;border:1px solid #d2992266;color:#d29922">T3 · Supply Chain</span>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
 
   <h2>Best decisions</h2>
   <div class="boards">{{DASHBOARDS}}</div>

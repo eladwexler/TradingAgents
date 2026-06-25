@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jensen Brain — Endorsement Map</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* ── tier colour system ── */
+  .tier1{--tc:#2ea043;--tb:#2ea04322;--tborder:#2ea04366}
+  .tier2{--tc:#58a6ff;--tb:#1f6feb22;--tborder:#1f6feb66}
+  .tier3{--tc:#d29922;--tb:#d2992218;--tborder:#d2992266}
+  .tier4{--tc:#8957e5;--tb:#8957e522;--tborder:#8957e566}
+  .tier5{--tc:#db6d28;--tb:#db6d2818;--tborder:#db6d2866}
+  .tier6{--tc:#8b98a5;--tb:#8b98a512;--tborder:#8b98a540}
+
+  .tier-badge{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.04em;
+    background:var(--tb);border:1px solid var(--tborder);color:var(--tc);white-space:nowrap
+  }
+
+  /* ── nav strip ── */
+  .tier-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 32px}
+  .tier-nav a{
+    display:flex;align-items:center;gap:8px;
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:10px 16px;text-decoration:none;color:var(--txt);font-size:13px;font-weight:600;
+    transition:border-color .15s,background .15s;min-width:160px
+  }
+  .tier-nav a:hover{border-color:var(--accent);background:var(--panel2)}
+  .tier-nav a .tier-num{font-size:20px;font-weight:800;line-height:1}
+  .tier-nav a .tier-label{font-size:11px;color:var(--muted);font-weight:400;margin-top:2px}
+
+  /* ── tier sections ── */
+  .tier-section{margin:0 0 40px;scroll-margin-top:80px}
+  .tier-head{
+    display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+    border-left:3px solid var(--tc);padding-left:12px;margin:0 0 14px
+  }
+  .tier-head h2{margin:0;font-size:17px;color:var(--txt);text-transform:none;letter-spacing:0}
+  .tier-head .tier-sub{font-size:12px;color:var(--muted)}
+
+  /* ── stock cards ── */
+  .jcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+  .jcard{
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:14px 16px;display:flex;flex-direction:column;gap:8px;
+    transition:border-color .15s
+  }
+  .jcard:hover{border-color:var(--accent)}
+  .jcard-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .jcard-tk{
+    font-size:18px;font-weight:800;min-width:60px;
+    color:var(--accent);text-decoration:none
+  }
+  .jcard-tk:hover{text-decoration:underline}
+  .jcard-tk.nolink{color:var(--txt);cursor:default;pointer-events:none}
+  .jcard-type{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+  .jcard-name{font-size:12px;color:var(--muted)}
+  .jcard-quote{
+    font-size:12px;color:var(--txt);line-height:1.55;
+    border-left:2px solid var(--tborder);padding-left:10px;
+    font-style:italic;opacity:.85
+  }
+  .jcard-hits{font-size:11px;color:var(--muted)}
+
+  /* ── hero ── */
+  .j-hero{
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:22px 24px;margin:0 0 28px;
+    display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap
+  }
+  .j-hero-icon{font-size:48px;line-height:1}
+  .j-hero-body h1{margin:0 0 6px;font-size:22px}
+  .j-hero-body p{margin:0;font-size:13px;color:var(--muted);max-width:680px;line-height:1.6}
+
+  .j-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 28px}
+  .j-stat{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .j-stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .j-stat .v{font-size:22px;font-weight:700;margin-top:4px}
+  .j-stat .v small{font-size:12px;font-weight:500;color:var(--muted)}
+
+  .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;
+    text-decoration:none;margin-bottom:20px}
+  .back-link:hover{color:var(--txt)}
+
+  /* sticky top bar */
+  .sticky-nav{
+    position:sticky;top:0;z-index:10;background:var(--bg);
+    border-bottom:1px solid var(--border);padding:6px 0 8px;margin:0 0 24px
+  }
+  .sticky-nav-inner{max-width:1180px;margin:0 auto;padding:0 20px;
+    display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .sticky-nav-inner a.sn-link{
+    font-size:12px;font-weight:600;padding:3px 12px;border-radius:14px;
+    border:1px solid var(--border);color:var(--muted);text-decoration:none;
+    transition:border-color .15s,color .15s
+  }
+  .sticky-nav-inner a.sn-link:hover{border-color:var(--accent);color:var(--txt)}
+  .sticky-nav-inner .sn-label{font-size:12px;color:var(--muted);margin-right:4px}
+</style>
+</head>
+<body>
+
+<div class="sticky-nav">
+  <div class="sticky-nav-inner">
+    <span class="sn-label">Jump:</span>
+    <a class="sn-link" href="#tier1">T1 · NVDA-Backed</a>
+    <a class="sn-link" href="#tier2">T2 · Platform Partners</a>
+    <a class="sn-link" href="#tier3">T3 · Supply Chain</a>
+    <a class="sn-link" href="#tier4">T4 · Hyperscalers</a>
+    <a class="sn-link" href="#tier5">T5 · Energy / DC Infra</a>
+    <a class="sn-link" href="#tier6">T6 · Mentioned</a>
+    <a class="sn-link" href="index.html" style="margin-left:auto;border-color:#30363d">← Main Dashboard</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <a href="index.html" class="back-link">← Back to Main Dashboard</a>
+
+  <div class="j-hero">
+    <div class="j-hero-icon">🧠</div>
+    <div class="j-hero-body">
+      <h1>Jensen Brain — AI Endorsement Map</h1>
+      <p>Every company Jensen Huang has named, endorsed, invested in, or flagged as critical infrastructure across
+      <strong>5,131 indexed chunks</strong> from 102 interviews, keynotes, and NVIDIA materials.
+      Stocks are ranked by the strength of Jensen's personal endorsement — from NVDA-invested companies he
+      publicly champions, down to single passing mentions. Tier 1 = NVDA equity investment (MRVL $2B, COHR $2B, CRWV, NBIS, INTC).
+      Tier 2 = named with conviction. Tier 3–5 = structural dependencies. Tier 6 = ambient mentions only.</p>
+    </div>
+  </div>
+
+  <div class="j-stats">
+    <div class="j-stat"><div class="k">Corpus</div><div class="v">5,131<small> chunks</small></div></div>
+    <div class="j-stat"><div class="k">Sources</div><div class="v">102<small> transcripts · 31 materials</small></div></div>
+    <div class="j-stat"><div class="k">Stocks named</div><div class="v">25+<small> unique tickers</small></div></div>
+    <div class="j-stat"><div class="k">NVDA-invested</div><div class="v">5<small> MRVL · COHR · CRWV · NBIS · INTC</small></div></div>
+    <div class="j-stat"><div class="k">Last refreshed</div><div class="v" style="font-size:14px">2026-06-25</div></div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- TIER 1 -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <section class="tier-section tier1" id="tier1">
+    <div class="tier-head">
+      <h2>Tier 1 — NVDA-Invested &amp; Personally Championed</h2>
+      <span class="tier-sub">NVDA equity stake + explicit public endorsement</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="MRVL_2026-06-24.html" class="jcard-tk">MRVL</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">NVDA invested · Joint keynote · NvLink Fusion</span>
+        </div>
+        <div class="jcard-name">Marvell Technology — custom silicon, optical DSP, PCIe switches</div>
+        <div class="jcard-quote">"Buy Marvell." — Jensen on stage at Computex June 2026 after announcing the NvLink Fusion partnership and NVDA's $1B investment in MRVL.</div>
+        <div class="jcard-hits">37 corpus chunks · dedicated 67-min joint keynote with CEO Matt Murphy</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="CRWV_2026-06-24.html" class="jcard-tk">CRWV</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">NVDA invested · Hyperscale cloud</span>
+        </div>
+        <div class="jcard-name">CoreWeave — NVDA-GPU cloud, Vera Rubin first-rack operator</div>
+        <div class="jcard-quote">"Coreweave is worth 50, 60, 70 billion dollars and growing incredibly fast." Jensen defended the NVDA investment against "circular deals" criticism at Milken 2026.</div>
+        <div class="jcard-hits">32 corpus chunks · congratulated on Vera Rubin MVL72 rack at GTC Taipei</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="NBIS_2026-06-24.html" class="jcard-tk">NBIS</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">NVDA invested · Hyperscale cloud</span>
+        </div>
+        <div class="jcard-name">Nebius Group — European AI-cloud, NVDA investee</div>
+        <div class="jcard-quote">"Recently we worked with Nebius and again they're growing incredibly fast." Jensen publicly defended the NVDA investment alongside CoreWeave: "We invested a dollar, they still had to go raise another nine."</div>
+        <div class="jcard-hits">9 corpus chunks · named at GTC Taipei 2026 + Milken Institute 2026</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="COHR_2026-06-24.html" class="jcard-tk">COHR</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">NVDA invested $2B · Optical backbone · US manufacturing</span>
+        </div>
+        <div class="jcard-name">Coherent Corp — InP lasers, silicon photonics, optical transceivers for AI data centers</div>
+        <div class="jcard-quote">"NVIDIA is investing $2 billion in Coherent to support R&D, future capacity and U.S.-based manufacturing, alongside a multibillion-dollar purchase commitment." Jensen personally attended Coherent's Texas groundbreaking June 16 2026: "Coherent is a world-class company, and the work you do is vital to our future, vital to the future of artificial intelligence."</div>
+        <div class="jcard-hits">Strategic rationale: copper can't span 8-rack NVL576 — Coherent's InP optics are physically inside every Vera Rubin Ultra system · 20-year NVDA relationship · also confirmed in AP Exclusive Jun 2026</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a class="jcard-tk nolink">INTC</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">NVDA invested · US foundry / manufacturing</span>
+        </div>
+        <div class="jcard-name">Intel — NVDA equity investment, US semiconductor manufacturing push</div>
+        <div class="jcard-quote">"He was delighted that we invested in Intel." — Jensen (AP Exclusive Jun 16 2026), citing Trump's reaction to NVDA's US reindustrialization commitments. Named alongside the Coherent investment and NVDA's ~$500B US manufacturing pledge.</div>
+        <div class="jcard-hits">Context: NVDA seeking domestic manufacturing alternatives to TSMC · Intel Foundry Services · no INTC analysis page yet</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- TIER 2 -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <section class="tier-section tier2" id="tier2">
+    <div class="tier-head">
+      <h2>Tier 2 — Explicit Platform Partners</h2>
+      <span class="tier-sub">Jensen named these by name with visible enthusiasm — "I'm quite excited about…"</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="PLTR_2026-06-24.html" class="jcard-tk">PLTR</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="jcard-type">Sovereign AI stack · Air-gapped deploy</span>
+        </div>
+        <div class="jcard-name">Palantir Technologies — AI/ontology platform, sovereign + enterprise</div>
+        <div class="jcard-quote">"One of the platforms that I'm quite excited about is Palantir and Dell. The three of our companies have made it possible to stand up a brand new type of AI platform…in any country, any air-gapped region, completely on prem." — GTC 2026</div>
+        <div class="jcard-hits">17 corpus chunks · GTC 2026 keynote + CES 2026</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="DELL_2026-06-20.html" class="jcard-tk">DELL</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="jcard-type">Vera Rubin rack partner · PLTR stack</span>
+        </div>
+        <div class="jcard-name">Dell Technologies — AI server racks, sovereign AI stack with PLTR+NVDA</div>
+        <div class="jcard-quote">"Congratulations to Dell and Coreweave as well for standing up their Vera Rubin MVL72 engineering rack." Named alongside PLTR as the three-company sovereign AI platform at GTC 2026.</div>
+        <div class="jcard-hits">36 corpus chunks · GTC Taipei 2026 + GTC 2026 keynotes</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="NOW_2026-06-20.html" class="jcard-tk">NOW</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="jcard-type">Agentic workflow · AGI-ready platform</span>
+        </div>
+        <div class="jcard-name">ServiceNow — enterprise workflow, NVDA agentic AI partner</div>
+        <div class="jcard-quote">"If you were an artificial general intelligence, would you use the tools like ServiceNow and SAP and Cadence…or would you reinvent a calculator? Of course you'd use a calculator." Named first at CES Jan 2026 as "the world's leading customer service and employee service platform."</div>
+        <div class="jcard-hits">10 corpus chunks · CES 2026 + Cisco AI Summit + AI Factory talk</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="SNOW_2026-06-20.html" class="jcard-tk">SNOW</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="jcard-type">AI data platform partner</span>
+        </div>
+        <div class="jcard-name">Snowflake — cloud data warehouse, NVDA data-frame acceleration partner</div>
+        <div class="jcard-quote">"Snowflake, the world's top data platform in the cloud. Incredible work being done there." Named at CES 2026 alongside ServiceNow as a core agentic AI platform. GTC 2026: framed as essential data-frame infrastructure for AI pipelines.</div>
+        <div class="jcard-hits">22 corpus chunks · CES 2026 + GTC 2026 keynote</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="MSFT_2026-06-24.html" class="jcard-tk">MSFT</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="jcard-type">AI PC co-dev · First Vera Rubin rack · Azure</span>
+        </div>
+        <div class="jcard-name">Microsoft — AI PC co-development (Copilot+ PC), first Vera Rubin operator</div>
+        <div class="jcard-quote">"I contacted Satya at Microsoft. I shared with them our dreams. We both got very excited. And so we started working on a new Windows." Congratulated MSFT on their "operational Vera Rubin MVL72 engineering rack" at GTC Taipei 2026.</div>
+        <div class="jcard-hits">139 corpus chunks · multiple keynotes + Stanford CS153</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a class="jcard-tk nolink">SAP</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="jcard-type">AGI-ready enterprise platform</span>
+        </div>
+        <div class="jcard-name">SAP SE — enterprise resource planning, named as AGI tool-use partner</div>
+        <div class="jcard-quote">"If you were an AGI, would you use the tools like ServiceNow and SAP and Cadence and Synopsys, or would you reinvent a calculator?" Named together with SN as software that even AGI would use rather than rebuild.</div>
+        <div class="jcard-hits">47 corpus chunks · AI Factory keynote Feb 2026 + Cisco AI Summit</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- TIER 3 -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <section class="tier-section tier3" id="tier3">
+    <div class="tier-head">
+      <h2>Tier 3 — Irreplaceable Supply Chain</h2>
+      <span class="tier-sub">Companies Jensen depends on — and publicly worries about as bottlenecks</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a class="jcard-tk nolink">TSM</a>
+          <span class="tier-badge tier3">Tier 3</span>
+          <span class="jcard-type">Foundry · CoWoS packaging · Supply bottleneck</span>
+        </div>
+        <div class="jcard-name">TSMC — Taiwan Semiconductor, sole manufacturer of NVDA chips</div>
+        <div class="jcard-quote">"It starts at TSMC. The seven new chips that make up Vera Rubin take shape through hundreds of processing steps. 3 nanometer process." Jensen tracks TSMC CoWoS capacity personally as a named supply bottleneck.</div>
+        <div class="jcard-hits">134 corpus chunks · every chip keynote slide · supply-chain risk interviews</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="MU_2026-06-24.html" class="jcard-tk">MU</a>
+          <span class="tier-badge tier3">Tier 3</span>
+          <span class="jcard-type">HBM4 supplier · On every chip slide</span>
+        </div>
+        <div class="jcard-name">Micron Technology — HBM4 memory on Vera Rubin compute board</div>
+        <div class="jcard-quote">"HBM4 memory from Micron SKH and Samsung. The Vera Rubin compute board — 6 trillion transistors with over 18,000 components on one board." Named alongside SK Hynix + Samsung on every chip spec slide.</div>
+        <div class="jcard-hits">32 corpus chunks · GTC Taipei 2026 + Computex 2026</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="ASML_2026-06-20.html" class="jcard-tk">ASML</a>
+          <span class="tier-badge tier3">Tier 3</span>
+          <span class="jcard-type">EUV lithography · Keeps Jensen up at night</span>
+        </div>
+        <div class="jcard-name">ASML Holding — EUV lithography, flagged as a geopolitical supply risk</div>
+        <div class="jcard-quote">"ASML is not an American company. And it turns out just about every one of our energy sectors rely deeply on technology." Named explicitly as a supply-chain risk he monitors — "the bottlenecks in the supply chain of AI" that keep him up at night.</div>
+        <div class="jcard-hits">15 corpus chunks · US Leadership in AI talk Apr 2026 · Dwarkesh interview</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="AVGO_2026-06-24.html" class="jcard-tk">AVGO</a>
+          <span class="tier-badge tier3">Tier 3</span>
+          <span class="jcard-type">Custom ASIC / TPU debate · Google TPU deal</span>
+        </div>
+        <div class="jcard-name">Broadcom — custom AI ASICs (XPUs/TPUs), networking silicon</div>
+        <div class="jcard-quote">"They have a multi-gigawatt deal with Broadcom and Google for TPUs…ASIC margin is 65 — what are you really saving?" Jensen engaged directly in the ASIC vs GPU economics debate, implicitly defending NVDA's moat.</div>
+        <div class="jcard-hits">4 corpus chunks · "Will Nvidia's moat persist?" interview Apr 2026</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- TIER 4 -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <section class="tier-section tier4" id="tier4">
+    <div class="tier-head">
+      <h2>Tier 4 — Hyperscaler Customers</h2>
+      <span class="tier-sub">Named cloud and platform customers — revenue sources Jensen acknowledges publicly</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="GOOGL_2026-06-20.html" class="jcard-tk">GOOGL</a>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="jcard-type">Biggest customer · Confidential compute · TPU context</span>
+        </div>
+        <div class="jcard-name">Alphabet / Google — cloud customer, NVDA confidential compute for Apple Intelligence</div>
+        <div class="jcard-quote">NVDA is "collaborating with Apple and Google to support next-generation Apple Intelligence features, using NVIDIA Blackwell GPUs with Confidential Computing." Google named as NScale customer and multi-gigawatt TPU-Broadcom deal counterparty.</div>
+        <div class="jcard-hits">239 corpus chunks — highest hyperscaler hit count</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="AMZN_2026-06-20.html" class="jcard-tk">AMZN</a>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="jcard-type">AWS cloud partner · Humane AI deal</span>
+        </div>
+        <div class="jcard-name">Amazon / AWS — cloud partner, 500 MW Humane AI deal announced on Jensen's stage</div>
+        <div class="jcard-quote">"Congratulations to the Humane team with AWS starting with 100 megawatts with a gigawatt deal." Named at GTC Taipei as an active compute infrastructure partner.</div>
+        <div class="jcard-hits">197 corpus chunks</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a class="jcard-tk nolink">AAPL</a>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="jcard-type">Confidential compute for Apple Intelligence</span>
+        </div>
+        <div class="jcard-name">Apple — Private Cloud Compute using NVDA Blackwell + confidential computing</div>
+        <div class="jcard-quote">NVDA "collaborating with Apple and Google to support next-generation Apple Intelligence features, using NVIDIA Blackwell GPUs with Confidential Computing integrated into Private Cloud Compute's hardware security architecture."</div>
+        <div class="jcard-hits">1 corpus chunk (NVDA blog Jun 2026) — indirect relationship</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a class="jcard-tk nolink">ORCL</a>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="jcard-type">First NVDA cloud customer</span>
+        </div>
+        <div class="jcard-name">Oracle Cloud — NVDA's first cloud deployment customer</div>
+        <div class="jcard-quote">"We were Oracle's first AI customer. Most people would have started at Microsoft Azure. We started at Oracle." Cited as a proof point of NVDA's own AI-first cloud adoption.</div>
+        <div class="jcard-hits">12 corpus chunks · Stanford CS153 + other interviews</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- TIER 5 -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <section class="tier-section tier5" id="tier5">
+    <div class="tier-head">
+      <h2>Tier 5 — Energy &amp; Data Center Infrastructure</h2>
+      <span class="tier-sub">Jensen's "layer 1" — the physical infrastructure beneath every AI factory</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="GEV_2026-06-20.html" class="jcard-tk">GEV</a>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="jcard-type">Energy "layer 1" · Grid equipment</span>
+        </div>
+        <div class="jcard-name">GE Vernova — power generation, grid infrastructure for AI factories</div>
+        <div class="jcard-quote">"GE Vernova, I mean everybody. The first layer of the cake is energy. The second layer of the cake is chips and computers and networking and switches and silicon photonics." — "Building the Dynamo of the Intelligence Age" Jun 2026.</div>
+        <div class="jcard-hits">14 corpus chunks · named in energy-layer framing</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="VRT_2026-06-24.html" class="jcard-tk">VRT</a>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="jcard-type">Prefab data center modules · NVDA partner</span>
+        </div>
+        <div class="jcard-name">Vertiv — thermal management and power infrastructure for AI data centers</div>
+        <div class="jcard-quote">"NVIDIA partners like Bechtel and Vertiv deliver prefabricated modules. Factory-built, tested and ready to plug in. This shrinks build time significantly." — GTC Singapore Oct 2025 keynote.</div>
+        <div class="jcard-hits">3 corpus chunks · GTC Singapore Oct 2025</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a class="jcard-tk nolink">HPE</a>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="jcard-type">HPE AI Factory with NVDA · Agent era expansion</span>
+        </div>
+        <div class="jcard-name">Hewlett Packard Enterprise — co-branded AI factory product with NVDA</div>
+        <div class="jcard-quote">NVDA blog Jun 2026: "NVIDIA and HPE are expanding the HPE AI Factory with NVIDIA, including NVIDIA Vera CPU and NVIDIA Agent Toolkit for HPE Private Cloud AI." Listed among Blackwell MLPerf partner operators.</div>
+        <div class="jcard-hits">6 corpus chunks · NVDA materials (HPE AI Factory blog + MLPerf)</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="SMCI_2026-06-20.html" class="jcard-tk">SMCI</a>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="jcard-type">Blackwell rack operator · MLPerf partner</span>
+        </div>
+        <div class="jcard-name">Super Micro Computer — NVDA Blackwell servers, named MLPerf partner</div>
+        <div class="jcard-quote">"Supermicro and TTA. Many of these partners are running some of the most demanding AI training workloads on NVIDIA infrastructure." Listed as a Blackwell deployment partner in NVDA MLPerf materials.</div>
+        <div class="jcard-hits">1 corpus chunk (NVDA materials) — functional mention only</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- TIER 6 -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <section class="tier-section tier6" id="tier6">
+    <div class="tier-head">
+      <h2>Tier 6 — Mentioned in Passing</h2>
+      <span class="tier-sub">Listed in ecosystem slides, historical analogies, or single ambient mentions — no personal conviction expressed</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="AMD_2026-06-20.html" class="jcard-tk">AMD</a>
+          <span class="tier-badge tier6">Tier 6</span>
+          <span class="jcard-type">Historical employer · Amdahl's law</span>
+        </div>
+        <div class="jcard-name">Advanced Micro Devices — Jensen's former employer, referenced historically</div>
+        <div class="jcard-quote">"I took a job at AMD and that was a really good choice because the work was really interesting." Also referenced technically: "avoid AMD's [Amdahl's] law." No competitive commentary.</div>
+        <div class="jcard-hits">14 corpus chunks</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="PANW_2026-06-24.html" class="jcard-tk">PANW</a>
+          <span class="tier-badge tier6">Tier 6</span>
+          <span class="jcard-type">Enterprise security stack list</span>
+        </div>
+        <div class="jcard-name">Palo Alto Networks — listed in enterprise security/software partner ecosystem</div>
+        <div class="jcard-quote">"The CrowdStrikes, the Palo Alto Networks, the Ciscos, the Microsofts." Listed as one of the enterprise software companies that build on NVDA — no individual emphasis.</div>
+        <div class="jcard-hits">1 corpus chunk</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a class="jcard-tk nolink">CSCO</a>
+          <span class="tier-badge tier6">Tier 6</span>
+          <span class="jcard-type">Enterprise stack list</span>
+        </div>
+        <div class="jcard-name">Cisco Systems — listed alongside PANW + MSFT in enterprise software ecosystem</div>
+        <div class="jcard-quote">Named in same enterprise software list as PANW. No specific Cisco-NVDA partnership described. 31 hits are mostly noise (unrelated "cisco" context in news materials).</div>
+        <div class="jcard-hits">31 corpus chunks — mostly news noise</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="QCOM_2026-06-20.html" class="jcard-tk">QCOM</a>
+          <span class="tier-badge tier6">Tier 6</span>
+          <span class="jcard-type">Historical 3G/4G analogy only</span>
+        </div>
+        <div class="jcard-name">Qualcomm — referenced only as historical 3G-to-4G modem transition analogy</div>
+        <div class="jcard-quote">"Qualcomm was the leader in that 3G to 4G modem modem…" Used as an analogy for technology transition. No present-day relationship described.</div>
+        <div class="jcard-hits">1 corpus chunk</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a class="jcard-tk nolink">CRM</a>
+          <span class="tier-badge tier6">Tier 6</span>
+          <span class="jcard-type">NVDA integration partner list</span>
+        </div>
+        <div class="jcard-name">Salesforce — listed as an NVDA-integrated enterprise software customer</div>
+        <div class="jcard-quote">"The CrowdStrikes, Puma, Salesforce — they're not our customers, but they're developers of ours that we've integrated NVIDIA technologies into." Listed, not spotlighted.</div>
+        <div class="jcard-hits">6 corpus chunks</div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="disclaimer">
+    Source: Jensen brain corpus — 102 transcripts + 31 NVIDIA materials, 5,131 BM25-indexed chunks.
+    Last rebuilt: 2026-06-25. Tier classification is editorial based on endorsement strength (NVDA investment, explicit named excitement, supply dependency, passing mention).
+    Not investment advice.
+  </div>
+
+</div>
+
+<script>
+// highlight the sticky nav link for the visible section
+(function(){
+  var sections = document.querySelectorAll('.tier-section');
+  var links = document.querySelectorAll('.sticky-nav-inner a.sn-link');
+  function onScroll(){
+    var scrollY = window.scrollY + 120;
+    var current = '';
+    sections.forEach(function(s){
+      if(s.offsetTop <= scrollY) current = s.id;
+    });
+    links.forEach(function(a){
+      var href = a.getAttribute('href');
+      a.style.borderColor = (href === '#'+current) ? 'var(--accent)' : '';
+      a.style.color = (href === '#'+current) ? 'var(--txt)' : '';
+    });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+})();
+</script>
+</body>
+</html>
