@@ -156,10 +156,20 @@ Decompose expected annualized return over the horizon into the **three sources o
 
 Combine into **bear / base / bull total-return paths to the horizon**, assign rough probabilities, and from those derive: the **expected total return**, the **P(beats benchmark)**, and the implied **5-tier rating**. The benchmark's own expected return over the horizon (~6–8%/yr for SPY as a default anchor, state your assumption) is the hurdle for alpha. **Reconcile the result with the Step-A base-rate anchor in one explicit sentence** — state the anchor's median excess + P(beat), your forecast's, and the *named, non-consensus* reason for any gap. If you can't name one, move your forecast back toward the anchor.
 
-### Stage 2 — Research debate (bull vs bear)
-Using all four analyst reports, run `max_debate_rounds` rounds (default 1). Each round:
-- **Bull Researcher** — evidence-based case for the position: growth potential, competitive advantages, positive indicators; directly rebut the latest bear points. Conversational, engaging — argue, don't just list.
-- **Bear Researcher** — case against: risks/challenges, competitive weaknesses, negative indicators; expose over-optimistic bull assumptions and rebut directly.
+### Stage 2 — Isolated Agent Debate (Bull vs Bear)
+To prevent "logic bleed" and ensure true cognitive isolation, you MUST NOT generate the Bull and Bear cases directly in your current chat context. You must spawn isolated background contexts using your Bash terminal tool and the `claude -p` CLI.
+
+1. Ensure the directory `analyzed-stocks/<TICKER>` exists (`mkdir -p`).
+2. Write your consolidated Stage 1 analyst reports and gathered data into a temporary file: `analyzed-stocks/<TICKER>/temp_data.md`.
+3. Spawn the **Isolated Bull Agent** via your terminal by piping the data into `claude`:
+   ```bash
+   cat analyzed-stocks/<TICKER>/temp_data.md | claude -p "You are a fierce, ruthless Bull Researcher. Read the data provided in standard input. Build an evidence-based case for the position: growth potential, competitive advantages, positive indicators. Argue fiercely for multiple expansion. Do not compromise or synthesize." > analyzed-stocks/<TICKER>/bull_case.md
+   ```
+4. Spawn the **Isolated Bear Agent**:
+   ```bash
+   cat analyzed-stocks/<TICKER>/temp_data.md | claude -p "You are a ruthless Bear Researcher. Read the data provided in standard input. Build the case against the position: risks, competitive weaknesses, negative indicators. Anchor heavily to base-rate reality and Bottleneck Cascade multiple compression risk. Treat growth assumptions as naive." > analyzed-stocks/<TICKER>/bear_case.md
+   ```
+5. Wait for both commands to finish, then read the contents of `bull_case.md` and `bear_case.md` back into your context. Keep these files in the directory as the transparent record of the debate.
 
 ### Stage 3 — Research Manager → investment plan
 Critically judge the debate and commit to a clear stance using exactly one rating: **Buy / Overweight / Hold / Underweight / Sell** (reserve Hold for genuinely balanced evidence). Produce an actionable investment plan for the trader.
@@ -174,11 +184,18 @@ Critically judge the debate and commit to a clear stance using exactly one ratin
 ### Stage 4 — Trader → transaction proposal
 Turn the investment plan into a concrete proposal anchored in the analyst reports and plan: direction, conviction, rough sizing/entry logic, and key risks to monitor.
 
-### Stage 5 — Risk debate (3-way)
-Run `max_risk_discuss_rounds` rounds (default 1) over the trader's proposal:
-- **Aggressive** analyst — champion high-reward/high-risk upside.
-- **Conservative** analyst — protect capital, minimize volatility, flag downside.
-- **Neutral** analyst — balanced, sustainable middle path; critique both extremes.
+### Stage 5 — Isolated Risk Debate (3-way)
+The risk debate must also be strictly isolated to prevent persona blending.
+1. Write the Trader's proposal (from Stage 4) plus key data into `analyzed-stocks/<TICKER>/temp_trader.md`.
+2. Spawn three isolated risk agents via your terminal (you can run them sequentially or concurrently):
+   ```bash
+   cat analyzed-stocks/<TICKER>/temp_trader.md | claude -p "You are an Aggressive Risk Analyst. Review the proposal in standard input. Champion high-reward upside and demand larger sizing if the company is PRE-bottleneck. Never soften your stance." > analyzed-stocks/<TICKER>/risk_agg.md
+   
+   cat analyzed-stocks/<TICKER>/temp_trader.md | claude -p "You are a Conservative Risk Analyst. Review the proposal in standard input. Protect capital, minimize volatility, and flag downside. Focus purely on survival through the bear-case drawdown." > analyzed-stocks/<TICKER>/risk_con.md
+   
+   cat analyzed-stocks/<TICKER>/temp_trader.md | claude -p "You are a Neutral Risk Analyst. Review the proposal in standard input. Provide a balanced, sustainable middle path, and fiercely critique the blind spots of both the aggressive and conservative extremes." > analyzed-stocks/<TICKER>/risk_neu.md
+   ```
+3. Wait for completion, then read the three risk reports from the files into your context before moving to the Portfolio Manager synthesis.
 
 ### Stage 6 — Portfolio Manager → final decision + calibrated forecast
 Synthesize the risk debate, the Expected-Return Model, **and any recalled past lessons** into a **Base Decision** (bottom-up). Then factor in the **Macro Phase / Stance** from the latest `ai-cycle-reports` (Stage 0) for a **Macro-Adjusted Decision**: if the cycle is in Late Phase 2 or Phase 3, haircut growth and apply more multiple compression — heavily penalize high-leverage infrastructure or AI wrappers to enforce top-down risk management on the bottom-up pick.

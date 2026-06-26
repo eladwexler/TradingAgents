@@ -76,6 +76,19 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .callout .k{color:var(--accent);font-size:12px;text-transform:uppercase;font-weight:700;margin-bottom:4px}
 .entry-callout{border-left-color:#d29922}
 .entry-callout .k{color:#d29922}
+.trader-callout{border-left-color:#58a6ff}
+.trader-callout .k{color:#58a6ff}
+.tdr-tbl{width:100%;border-collapse:collapse;margin-top:6px;font-size:13px}
+.tdr-tbl td{padding:4px 8px;border-bottom:1px solid var(--border)}
+.tdr-tbl tr:last-child td{border-bottom:none}
+.tdr-label{color:var(--muted);width:32%;font-weight:600;white-space:nowrap}
+.tdr-val{font-size:14px}
+.dbt{width:100%;border-collapse:collapse;margin:8px 0 20px;font-size:13px}
+.dbt th,.dbt td{padding:7px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.dbt-bull-h{background:rgba(63,185,80,.12);color:#3fb950;font-weight:700;width:50%}
+.dbt-bear-h{background:rgba(248,81,73,.12);color:#f85149;font-weight:700;width:50%}
+.dbt-bull{background:rgba(63,185,80,.04)}
+.dbt-bear{background:rgba(248,81,73,.04)}
 .body{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:6px 22px 18px;margin-top:18px}
 .body h1{font-size:20px}.body h2{font-size:15px;color:var(--txt);text-transform:none;letter-spacing:0}
 .body h3{font-size:14px;color:var(--muted)}

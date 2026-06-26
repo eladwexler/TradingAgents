@@ -1447,6 +1447,109 @@ def build_under_pressure(up):
             f'(as of {gen}) — candidates to re-analyze before the horizon matures</span></h2>'
             f'<ul class="chg">{rows}</ul>'), len(flagged)
 
+# ---------- debate table (bull_case.md + bear_case.md) ----------------------
+
+def build_debate_table(ticker_dir):
+    """Two-column bull/bear argument table from isolated Stage-2 agent files."""
+    bull_path = os.path.join(ticker_dir, "bull_case.md")
+    bear_path = os.path.join(ticker_dir, "bear_case.md")
+    if not (os.path.exists(bull_path) and os.path.exists(bear_path)):
+        return ""
+
+    def extract_sections(path):
+        out = []
+        for line in open(path, encoding="utf-8"):
+            m = re.match(r'^#{1,3}\s+(.+)', line)
+            if not m:
+                continue
+            txt = m.group(1).strip()
+            # skip file-level title headings and summary sections
+            if re.search(r'BULL CASE|BEAR CASE|STAGE 2|RESEARCHER|SUMMARY|VERDICT', txt, re.I):
+                continue
+            # strip leading roman-numeral + dot/period prefix  (e.g. "III. THE THESIS")
+            txt = re.sub(r'^[IVXLC]+\.\s+', '', txt)
+            if txt:
+                out.append(txt)
+        return out
+
+    bull = extract_sections(bull_path)
+    bear = extract_sections(bear_path)
+    if not bull and not bear:
+        return ""
+
+    rows = []
+    for i in range(max(len(bull), len(bear))):
+        b = f'<td class="dbt-bull">{html.escape(bull[i])}</td>' if i < len(bull) else '<td class="dbt-bull muted">—</td>'
+        r = f'<td class="dbt-bear">{html.escape(bear[i])}</td>' if i < len(bear) else '<td class="dbt-bear muted">—</td>'
+        rows.append(f'<tr>{b}{r}</tr>')
+
+    return (
+        '<h2>Bull vs Bear Debate '
+        '<span class="muted" style="text-transform:none;font-weight:400">'
+        '· isolated agent debate (Stage 2) · argument-by-argument</span></h2>'
+        '<table class="dbt">'
+        '<thead><tr>'
+        '<th class="dbt-bull-h">🐂 Bull Case</th>'
+        '<th class="dbt-bear-h">🐻 Bear Case</th>'
+        '</tr></thead>'
+        '<tbody>' + ''.join(rows) + '</tbody>'
+        '</table>'
+    )
+
+
+# ---------- trader box (temp_trader.md) -------------------------------------
+
+def build_trader_box(ticker_dir):
+    """Highlighted Trader entry/sizing callout from Stage-4 temp_trader.md."""
+    path = os.path.join(ticker_dir, "temp_trader.md")
+    if not os.path.exists(path):
+        return ""
+    md = open(path, encoding="utf-8").read()
+
+    def g(pat):
+        m = re.search(pat, md, re.M | re.I)
+        return m.group(1).strip() if m else ""
+
+    direction   = g(r'^\s*-\s*\*\*Direction:\*\*\s*(.+)')
+    entry_zone  = g(r'^\s*-\s*\*\*Entry zone:\*\*\s*(.+)')
+    preferred   = g(r'^\s*-\s*\*\*Preferred entry:\*\*\s*(.+)')
+    add_tranche = g(r'^\s*-\s*\*\*(?:Second tranche add|Add tranche):\*\*\s*(.+)')
+    no_chase    = g(r'^\s*-\s*\*\*Do NOT chase:\*\*\s*(.+)')
+    size        = g(r'^\s*-\s*\*\*Position size:\*\*\s*(.+)')
+    stop_op     = g(r'^\s*-\s*\*\*Operational stop:\*\*\s*(.+)')
+    catalyst    = g(r'^\s*-\s*\*\*Primary:\*\*\s*(.+)')
+
+    if not entry_zone and not preferred:
+        return ""
+
+    def row(label, val, bold=False):
+        if not val:
+            return ""
+        v = f'<strong>{html.escape(val)}</strong>' if bold else html.escape(val)
+        return f'<tr><td class="tdr-label">{label}</td><td class="tdr-val">{v}</td></tr>'
+
+    rows = (
+        row("Direction", direction)
+        + row("Entry zone", entry_zone or preferred, bold=True)
+        + (row("Preferred entry", preferred, bold=True) if entry_zone and preferred else "")
+        + row("Add tranche", add_tranche)
+        + row("Do NOT chase above", no_chase)
+        + row("Position size", size, bold=True)
+        + row("Operational stop", stop_op)
+        + row("Thesis catalyst", catalyst)
+    )
+
+    if not rows:
+        return ""
+
+    return (
+        '<div class="callout trader-callout">'
+        '<div class="k">Trader · Entry &amp; sizing plan (Stage 4)</div>'
+        '<table class="tdr-tbl">' + rows + '</table>'
+        '</div>'
+    )
+
+
 # ---------- build ------------------------------------------------------------
 
 def main():
@@ -1582,6 +1685,7 @@ def main():
                   if r["status"] == "resolved" else
                   (f'Pending · P={pb} · H={r["horizon"]}' if pb != "—" else "Pending"))
         page = dtpl
+        ticker_dir = os.path.join(STOCKS, r["ticker"])
         repl = {
             "{{TICKER}}": r["ticker"], "{{NAME}}": html.escape(r["name"]), "{{DATE}}": r["date"],
             "{{HORIZON}}": r["horizon"], "{{STATUS}}": status,
@@ -1599,10 +1703,12 @@ def main():
             "{{X}}": r["x"] or "n/a", "{{X_CLS}}": cls_x(r["x"]),
             "{{COMBINED}}": r["combined"] or "n/a", "{{COMBINED_CLS}}": cls_combined(r["combined"]),
             "{{ENTRY_ZONE_BOX}}": (
-                f'<div class="callout entry-callout"><div class="k">Better entry / add zone</div>'
-                f'{html.escape(r["entry_zone"])}</div>'
+                f'<div class="callout entry-callout"><div class="k">Entry zone</div>'
+                f'<div style="font-size:15px;font-weight:700">{html.escape(r["entry_zone"])}</div></div>'
                 if r.get("entry_zone") else ""
             ),
+            "{{TRADER_BOX}}": build_trader_box(ticker_dir),
+            "{{DEBATE_TABLE}}": build_debate_table(ticker_dir),
             "{{VERDICT_NEW}}": inline(r["verdict_new"]) if r["verdict_new"] else '<span class="muted">—</span>',
             "{{FORECAST_TABLE}}": forecast_html(r["forecast"]),
             "{{METRICS_BOX}}": metrics_box(metrics.get(r["ticker"])),
