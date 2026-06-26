@@ -1590,10 +1590,10 @@ def main():
         last_price_n = None  # latest live close (most recent trading day)
         market_cap_n = (metrics.get(tk) or {}).get("market_cap")
 
+        # Always fetch live price regardless of pending/resolved status so that
+        # resolved decision pages also show the current price (not "—").
+        last_price_n = live_last_price(tk)
         if status == "pending":
-            # Always show a live price, even for a decision logged today (its
-            # return window has no completed trading rows yet).
-            last_price_n = live_last_price(tk)
             if fetch_returns:
                 try:
                     days_elapsed = (datetime.datetime.now() - datetime.datetime.strptime(date, "%Y-%m-%d")).days
@@ -1686,6 +1686,11 @@ def main():
                   (f'Pending · P={pb} · H={r["horizon"]}' if pb != "—" else "Pending"))
         page = dtpl
         ticker_dir = os.path.join(STOCKS, r["ticker"])
+        # Brain verdicts — backfill from the latest decision for this ticker when
+        # the current record (usually a resolved/older one) predates the brain system.
+        lat = latest.get(r["ticker"], {})
+        has_brains = any(r.get(k) for k in ("jensen", "leopold", "jordi", "gavin", "x"))
+        brain_src = r if has_brains else lat
         repl = {
             "{{TICKER}}": r["ticker"], "{{NAME}}": html.escape(r["name"]), "{{DATE}}": r["date"],
             "{{HORIZON}}": r["horizon"], "{{STATUS}}": status,
@@ -1696,12 +1701,12 @@ def main():
             "{{EXP_CLS}}": ("b-pos" if (r["exp24_n"] or 0) > 0 else "b-neg" if r["exp24_n"] is not None else ""),
             "{{PRICE}}": price_cell(r),
             "{{DOMAIN}}": AI_DOMAIN.get(r["ticker"], "—"),
-            "{{JENSEN}}": r["jensen"] or "n/a", "{{JENSEN_CLS}}": cls_brain(r["jensen"]),
-            "{{LEOPOLD}}": r["leopold"] or "n/a", "{{LEOPOLD_CLS}}": cls_brain(r["leopold"]),
-            "{{JORDI}}": r["jordi"] or "n/a", "{{JORDI_CLS}}": cls_brain(r["jordi"]),
-            "{{GAVIN}}": r["gavin"] or "n/a", "{{GAVIN_CLS}}": cls_brain(r["gavin"]),
-            "{{X}}": r["x"] or "n/a", "{{X_CLS}}": cls_x(r["x"]),
-            "{{COMBINED}}": r["combined"] or "n/a", "{{COMBINED_CLS}}": cls_combined(r["combined"]),
+            "{{JENSEN}}": brain_src.get("jensen") or "n/a", "{{JENSEN_CLS}}": cls_brain(brain_src.get("jensen")),
+            "{{LEOPOLD}}": brain_src.get("leopold") or "n/a", "{{LEOPOLD_CLS}}": cls_brain(brain_src.get("leopold")),
+            "{{JORDI}}": brain_src.get("jordi") or "n/a", "{{JORDI_CLS}}": cls_brain(brain_src.get("jordi")),
+            "{{GAVIN}}": brain_src.get("gavin") or "n/a", "{{GAVIN_CLS}}": cls_brain(brain_src.get("gavin")),
+            "{{X}}": brain_src.get("x") or "n/a", "{{X_CLS}}": cls_x(brain_src.get("x")),
+            "{{COMBINED}}": brain_src.get("combined") or "n/a", "{{COMBINED_CLS}}": cls_combined(brain_src.get("combined")),
             "{{ENTRY_ZONE_BOX}}": (
                 f'<div class="callout entry-callout"><div class="k">Entry zone</div>'
                 f'<div style="font-size:15px;font-weight:700">{html.escape(r["entry_zone"])}</div></div>'
