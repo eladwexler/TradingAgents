@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jordi Brain — "Your Capex Is My Opportunity"</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .tier1{--tc:#2ea043;--tb:#2ea04322;--tborder:#2ea04366}
+  .tier2{--tc:#58a6ff;--tb:#1f6feb22;--tborder:#1f6feb66}
+  .tier3{--tc:#d29922;--tb:#d2992218;--tborder:#d2992266}
+  .tier4{--tc:#8957e5;--tb:#8957e522;--tborder:#8957e566}
+  .tier5{--tc:#db6d28;--tb:#db6d2818;--tborder:#db6d2866}
+  .tier6{--tc:#f85149;--tb:#f8514918;--tborder:#f8514966}
+
+  .tier-badge{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.04em;
+    background:var(--tb);border:1px solid var(--tborder);color:var(--tc);white-space:nowrap
+  }
+  .tier-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 32px}
+  .tier-nav a{
+    display:flex;align-items:center;gap:8px;
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:10px 16px;text-decoration:none;color:var(--txt);font-size:13px;font-weight:600;
+    transition:border-color .15s,background .15s;min-width:160px
+  }
+  .tier-nav a:hover{border-color:var(--accent);background:var(--panel2)}
+  .tier-nav a .tier-num{font-size:20px;font-weight:800;line-height:1}
+  .tier-nav a .tier-label{font-size:11px;color:var(--muted);font-weight:400;margin-top:2px}
+  .tier-section{margin:0 0 40px;scroll-margin-top:80px}
+  .tier-head{
+    display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+    border-left:3px solid var(--tc);padding-left:12px;margin:0 0 14px
+  }
+  .tier-head h2{margin:0;font-size:17px;color:var(--txt);text-transform:none;letter-spacing:0}
+  .tier-head .tier-sub{font-size:12px;color:var(--muted)}
+  .jcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+  .jcard{
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:14px 16px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s
+  }
+  .jcard:hover{border-color:var(--accent)}
+  .jcard-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .jcard-tk{font-size:18px;font-weight:800;min-width:60px;color:var(--accent);text-decoration:none}
+  .jcard-tk:hover{text-decoration:underline}
+  .jcard-tk.nolink{color:var(--txt);cursor:default;pointer-events:none}
+  .jcard-type{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+  .jcard-name{font-size:12px;color:var(--muted)}
+  .jcard-quote{
+    font-size:12px;color:var(--txt);line-height:1.55;
+    border-left:2px solid var(--tborder);padding-left:10px;font-style:italic;opacity:.85
+  }
+  .jcard-hits{font-size:11px;color:var(--muted)}
+  .j-hero{
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:22px 24px;margin:0 0 28px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap
+  }
+  .j-hero-icon{font-size:48px;line-height:1}
+  .j-hero-body h1{margin:0 0 6px;font-size:22px}
+  .j-hero-body p{margin:0;font-size:13px;color:var(--muted);max-width:680px;line-height:1.6}
+  .j-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 28px}
+  .j-stat{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .j-stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .j-stat .v{font-size:22px;font-weight:700;margin-top:4px}
+  .j-stat .v small{font-size:12px;font-weight:500;color:var(--muted)}
+  .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;
+    text-decoration:none;margin-bottom:20px}
+  .back-link:hover{color:var(--txt)}
+  .sticky-nav{
+    position:sticky;top:0;z-index:10;background:var(--bg);
+    border-bottom:1px solid var(--border);padding:6px 0 8px;margin:0 0 24px
+  }
+  .sticky-nav-inner{max-width:1180px;margin:0 auto;padding:0 20px;
+    display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .sticky-nav-inner a.sn-link{
+    font-size:12px;font-weight:600;padding:3px 12px;border-radius:14px;
+    border:1px solid var(--border);color:var(--muted);text-decoration:none;
+    transition:border-color .15s,color .15s
+  }
+  .sticky-nav-inner a.sn-link:hover{border-color:var(--accent);color:var(--txt)}
+  .sticky-nav-inner .sn-label{font-size:12px;color:var(--muted);margin-right:4px}
+  .caution-badge{background:#db6d2818;border:1px solid #db6d2866;color:#db6d28;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .bear-badge{background:#f8514918;border:1px solid #f8514966;color:#f85149;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<div class="sticky-nav">
+  <div class="sticky-nav-inner">
+    <span class="sn-label">Jump:</span>
+    <a class="sn-link" href="#tier1">T1 · Semi Receivers</a>
+    <a class="sn-link" href="#tier2">T2 · Power Receivers</a>
+    <a class="sn-link" href="#tier3">T3 · Bitcoin Macro</a>
+    <a class="sn-link" href="#tier4">T4 · Physical AI</a>
+    <a class="sn-link" href="#tier5">T5 · Cautious (Spenders)</a>
+    <a class="sn-link" href="#tier6">T6 · Creative Destruction</a>
+    <a class="sn-link" href="index.html" style="margin-left:auto;border-color:#30363d">← Main Dashboard</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <a href="index.html" class="back-link">← Back to Main Dashboard</a>
+
+  <div class="j-hero">
+    <div class="j-hero-icon">📡</div>
+    <div class="j-hero-body">
+      <h1>Jordi Brain — "Your Capex Is My Opportunity"</h1>
+      <p>Jordi Visser (@JordiVisserLabs, W Capital Advisors) built his framework around a single insight: the $1.3 trillion cloud backlog is a <strong>revenue transfer</strong> from hyperscaler spenders (MSFT, AMZN, META, GOOGL) to infrastructure receivers (semis, power, networking). His thesis: "The hyperscalers are absolutely crushing it right now — but the buildout beta is in the receivers." Layer in Bitcoin as the purest macro scarcity trade and physical AI (robotics) as the second wave, and you have Jordi's full playbook.</p>
+    </div>
+  </div>
+
+  <div class="j-stats">
+    <div class="j-stat"><div class="k">Corpus</div><div class="v">4,601<small> chunks</small></div></div>
+    <div class="j-stat"><div class="k">Transcripts</div><div class="v">98<small> @JordiVisserLabs</small></div></div>
+    <div class="j-stat"><div class="k">Cloud backlog</div><div class="v">$1.3T<small> contracted, undelivered</small></div></div>
+    <div class="j-stat"><div class="k">Core trade</div><div class="v" style="font-size:12px">Own receivers, cautious on spenders</div></div>
+    <div class="j-stat"><div class="k">Last refreshed</div><div class="v" style="font-size:14px">2026-06-27</div></div>
+  </div>
+
+  <section class="tier-section tier1" id="tier1">
+    <div class="tier-head">
+      <h2>Tier 1 — AI Capex Receivers: Semis &amp; Networking</h2>
+      <span class="tier-sub">The hyperscalers' $500B+ spend goes HERE — own the pick-and-shovel layer</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="NVDA_2026-06-24.html" class="jcard-tk">NVDA</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">GPU accelerators · Core receiver · Must-own</span>
+        </div>
+        <div class="jcard-name">NVIDIA — GPU compute; the primary beneficiary of $1.3T hyperscaler capex</div>
+        <div class="jcard-quote">"The insatiable demand for compute — they go through Fable 5. I think this is important. The KOSPI is directly related to this buildout. Hyperscalers made new highs — this is equal weight, kind of lagging — but it's NVDA that is getting the capex dollars." Jordi consistently positions NVDA as the clearest receiver of hyperscaler spend.</div>
+        <div class="jcard-hits">Core receiver thesis · "the beta of the buildout" · highest-conviction semi in corpus</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="AVGO_2026-06-24.html" class="jcard-tk">AVGO</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">Custom AI ASIC · TPU silicon · Networking</span>
+        </div>
+        <div class="jcard-name">Broadcom — custom AI ASICs for Google/Meta, plus networking silicon</div>
+        <div class="jcard-quote">"Broadcom has 10 gigawatts of contracted ASIC demand — warrants included." The hyperscaler custom-chip story makes AVGO a direct capex receiver alongside NVDA. Jordi views AVGO as the second-tier receiver for hyperscalers building in-house silicon at scale.</div>
+        <div class="jcard-hits">Cited in capex receiver context alongside NVDA · 10GW contracted demand mentioned</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="MU_2026-06-24.html" class="jcard-tk">MU</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">HBM memory · KOSPI proxy · Core receiver</span>
+        </div>
+        <div class="jcard-name">Micron Technology — HBM4 and DRAM; Jordi uses the KOSPI (which includes MU/SK Hynix) as a leading indicator</div>
+        <div class="jcard-quote">"The KOSPI, one of the important signs of this whole thing — mainly because they have the semis in terms of memory, but they have tons of the electronic side in there and they also have the heavy equipment. So the KOSPI is directly related to this buildout." MU is the US proxy for what KOSPI signals.</div>
+        <div class="jcard-hits">Memory layer receiver · KOSPI-proxy signal · tracked as a buildout leading indicator</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="CRDO_2026-06-24.html" class="jcard-tk">CRDO</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">Active copper cables · AI rack interconnect · Pure receiver</span>
+        </div>
+        <div class="jcard-name">Credo Technology — active electrical cables for AI cluster rack-to-rack interconnect</div>
+        <div class="jcard-quote">Credo sits at the heart of the capex receiver thesis: every dollar MSFT, AMZN, META, and GOOGL spend on GPU clusters also spends dollars on the cables connecting those GPUs. Credo's AEC technology wins on cost and power vs. optical for shorter reaches — a direct beneficiary with no hyperscaler exposure risk.</div>
+        <div class="jcard-hits">Pure infrastructure receiver · no direct hyperscaler exposure · AI connectivity play</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="MRVL_2026-06-24.html" class="jcard-tk">MRVL</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">Custom AI silicon · Optical DSP · NVDA partner</span>
+        </div>
+        <div class="jcard-name">Marvell Technology — custom AI silicon, optical DSP, PCIe switches</div>
+        <div class="jcard-quote">Marvell benefits from both the ASIC custom-silicon wave (hyperscalers building in-house chips on MRVL platform) and the optical interconnect wave. NvLink Fusion partnership with NVDA (announced Computex 2026 with $1B NVDA investment) validates the receiver thesis: the capex goes through NVDA AND the custom-silicon vendors below.</div>
+        <div class="jcard-hits">Capex receiver via ASIC platform + optical DSP · NVDA NvLink Fusion partnership</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier2" id="tier2">
+    <div class="tier-head">
+      <h2>Tier 2 — Power &amp; Grid: The Energy Receiver Layer</h2>
+      <span class="tier-sub">The infrastructure beneath semis — every GPU cluster needs power first</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="CEG_2026-06-24.html" class="jcard-tk">CEG</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="jcard-type">Nuclear power · 24/7 clean baseload · AI data center partner</span>
+        </div>
+        <div class="jcard-name">Constellation Energy — nuclear power, data center power purchase agreements</div>
+        <div class="jcard-quote">"The buildout is the beta. The hyperscalers are just kind of market performers — they're actually underperforming by a couple percent when you equal weight them. The power layer is where the real excess return lives." CEG provides the 24/7 carbon-free baseload that data center operators demand.</div>
+        <div class="jcard-hits">Power receiver thesis · nuclear restart deals · data center PPAs · AI power play</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="VRT_2026-06-24.html" class="jcard-tk">VRT</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="jcard-type">Data center thermal mgmt · Power distribution · AI cooling</span>
+        </div>
+        <div class="jcard-name">Vertiv — thermal management, power distribution, precision cooling for AI data centers</div>
+        <div class="jcard-quote">Every GPU generates heat. Jordi's "your capex is my opportunity" extends to the thermal management layer: the $500B capex wave flows through cooling, power conditioning, and distribution equipment before it reaches the chips themselves. Vertiv is the pure-play beneficiary of rack-level power density explosion.</div>
+        <div class="jcard-hits">Power/cooling receiver · direct capex beneficiary · AI data center thermal play</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier3" id="tier3">
+    <div class="tier-head">
+      <h2>Tier 3 — Bitcoin / Macro Scarcity Trade</h2>
+      <span class="tier-sub">Jordi's "new QE" thesis: AI deflation + fiscal expansion = Bitcoin wins as the hardest scarce asset</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">BTC</span>
+          <span class="tier-badge tier3">Tier 3</span>
+          <span class="jcard-type">Scarcity asset · AI deflation hedge · Macro trade</span>
+        </div>
+        <div class="jcard-name">Bitcoin — the purest expression of Jordi's AI-macro scarcity thesis</div>
+        <div class="jcard-quote">"I am different than Brad Gerstner and Gavin Baker in not sitting there saying I think Anthropic and OpenAI will definitely be winners. What I AM convinced about is Bitcoin as the scarcity play in a world where AI is deflationary and governments keep printing." Jordi treats BTC as the macro instrument that benefits most from AI-driven deflation + continued fiscal expansion.</div>
+        <div class="jcard-hits">Highest-conviction macro trade · "new QE" thesis · AI deflation + scarcity = BTC wins</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">IBIT</span>
+          <span class="tier-badge tier3">Tier 3</span>
+          <span class="jcard-type">Bitcoin ETF · Institutional access · BTC proxy</span>
+        </div>
+        <div class="jcard-name">iShares Bitcoin Trust ETF — the cleanest way to hold BTC exposure in institutional accounts</div>
+        <div class="jcard-quote">For institutional investors who can't hold spot Bitcoin, IBIT provides the same exposure Jordi targets with his macro BTC thesis. He discusses Bitcoin ETF inflows as a key signal of the institutional adoption wave that is just beginning to move the needle on Bitcoin as a reserve asset.</div>
+        <div class="jcard-hits">BTC proxy for institutional accounts · macro scarcity thesis expression</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier4" id="tier4">
+    <div class="tier-head">
+      <h2>Tier 4 — Physical AI &amp; Robotics Wave</h2>
+      <span class="tier-sub">The second wave after software — AI moves into the physical world</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">TSLA</span>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="jcard-type">Autonomous vehicles · Optimus robotics · Physical AI</span>
+        </div>
+        <div class="jcard-name">Tesla — autonomous vehicles and humanoid robotics; Jordi's physical AI play</div>
+        <div class="jcard-quote">"Imagine if Albert Einstein had just thought about fundamental physics 24 hours a day. He doesn't have to eat. He doesn't have to sleep. He doesn't have to relax." Jordi uses this framing for AI agents and extends it to physical AI: robots that do the same in the physical world. Tesla's Optimus + FSD is the most investable expression of that thesis today.</div>
+        <div class="jcard-hits">Physical AI thesis · Optimus robotics + FSD autonomous = "AI moves into the real world"</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier5" id="tier5">
+    <div class="tier-head">
+      <h2>Tier 5 — Cautious: The Hyperscaler Spenders</h2>
+      <span class="tier-sub">"Their capex is YOUR opportunity" — these are the spenders, not the receivers; market-rate performers at best</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="MSFT_2026-06-24.html" class="jcard-tk">MSFT</a>
+          <span class="caution-badge">Cautious — Spender</span>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="jcard-type">Hyperscaler · $80B capex · Cloud backlog</span>
+        </div>
+        <div class="jcard-name">Microsoft — $80B 2025 AI capex; largest cloud backlog contributor; Azure growth</div>
+        <div class="jcard-quote">"I am shorting the hyperscalers as a way and being long all of the thematic portfolio I have is still going to work out extremely well going forward — because that's the spenders." MSFT's $80B capex wall is exactly the denominator that makes semis, power, and networking winners. But MSFT itself lags on the trade: "They're actually underperforming by a couple percent when you equal weight them."</div>
+        <div class="jcard-hits">$1.3T cloud backlog context · hyperscaler spender not receiver · underperforms semis during buildout</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="AMZN_2026-06-20.html" class="jcard-tk">AMZN</a>
+          <span class="caution-badge">Cautious — Spender</span>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="jcard-type">AWS · $460B cloud backlog · AI capex wave</span>
+        </div>
+        <div class="jcard-name">Amazon / AWS — $460B contracted cloud backlog; the single largest hyperscaler spender</div>
+        <div class="jcard-quote">"Here are the numbers for the cloud backlog: 400… 460… 400. You're dealing with 1.3 trillion dollars of backlog for these three companies, Amazon, Google, and Microsoft. That's revenue. Those are contracted dollars that right now they can't get because they don't have the capacity." AMZN is the biggest spender — and spending is what flows to NVDA, not what flows back to AMZN shareholders.</div>
+        <div class="jcard-hits">$460B cloud backlog (largest) · spending creates the receiver opportunity, not equity returns for AMZN</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">META</span>
+          <span class="caution-badge">Cautious — Spender</span>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="jcard-type">$60B capex · LLaMA infrastructure · AI compute spender</span>
+        </div>
+        <div class="jcard-name">Meta Platforms — $60B+ AI infrastructure capex; LLaMA open-source model infrastructure</div>
+        <div class="jcard-quote">"Meta had a 10% move lower. I still believe shorting the hyperscalers as a way and being long all of the thematic portfolio I have is still going to work out extremely well." Meta's open-source LLaMA model strategy requires massive compute spend — exactly what flows to NVDA, not back to Meta equity holders. Jordi is cautious on META as a stock even while being bullish on what META's capex means for semis.</div>
+        <div class="jcard-hits">Hyperscaler spender · LLaMA compute wall · Jordi explicitly short hyperscaler basket</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="GOOGL_2026-06-20.html" class="jcard-tk">GOOGL</a>
+          <span class="caution-badge">Cautious — Spender</span>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="jcard-type">$400B cloud backlog · TPU ASIC · DeepMind</span>
+        </div>
+        <div class="jcard-name">Alphabet / Google — DeepMind AGI lab, $400B cloud backlog, custom TPU silicon</div>
+        <div class="jcard-quote">"Google had a 10% move higher. Equal-weight hyperscalers are up here but only a couple percent — the buildout IS the beta, not the hyperscalers." GOOGL's $400B cloud backlog makes it a massive source of demand for NVDA and AVGO — but Jordi trades the demand, not the demander.</div>
+        <div class="jcard-hits">$400B cloud backlog · Jordi short the hyperscaler basket · capex flows OUT of GOOGL to receivers</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier6" id="tier6">
+    <div class="tier-head">
+      <h2>Tier 6 — Creative Destruction Victims</h2>
+      <span class="tier-sub">Jordi's "SaaS-pocalypse" thesis — AI commoditizes labor-arbitrage businesses and generic SaaS</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">BPO</span>
+          <span class="bear-badge">Structural Short</span>
+          <span class="tier-badge tier6">Tier 6</span>
+          <span class="jcard-type">Labor arbitrage · AI commoditized</span>
+        </div>
+        <div class="jcard-name">Business Process Outsourcing (Infosys, Cognizant, Wipro etc.) — labor-arbitrage services that AI directly replaces</div>
+        <div class="jcard-quote">"The hyperscalers are in a race to commoditization. All of them including Anthropic and OpenAI may not get the money that they're supposed to get in the end. And the same is true for any company whose business model depends on human labor doing things that AI can now do cheaper and faster." BPO/offshore services are Jordi's clearest creative-destruction victim.</div>
+        <div class="jcard-hits">AI directly commoditizes labor arbitrage · classic creative destruction · Jordi's short thesis</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">SAAS</span>
+          <span class="bear-badge">Watch — ROIC Risk</span>
+          <span class="tier-badge tier6">Tier 6</span>
+          <span class="jcard-type">Legacy SaaS · AI substitution · ROIC gap</span>
+        </div>
+        <div class="jcard-name">Legacy enterprise SaaS — software businesses whose moat depends on switching costs AI now breaks</div>
+        <div class="jcard-quote">"I am not positive on [Anthropic and OpenAI] winning necessarily, and I am also not positive on the businesses that have been built around labor arbitrage or legacy software that AI is starting to replace at the margin." Jordi is skeptical of any software business whose pricing power comes from workflow lock-in rather than genuine AI integration — the ROIC gap compounds as AI makes these products interchangeable.</div>
+        <div class="jcard-hits">ROIC gap thesis · workflow lock-in eroding · AI substitutes for legacy SaaS features</div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="disclaimer" style="font-size:12px;color:var(--muted);margin-top:32px;padding-top:16px;border-top:1px solid var(--border)">
+    Source: Jordi Brain corpus — 4,601 chunks from 98 @JordiVisserLabs YouTube transcripts + news lane. Last rebuilt: 2026-06-27.
+    Tier classification is editorial based on Jordi's stated framework ("your capex is my opportunity") and explicit mentions in corpus.
+    No 13F filed (W Capital Advisors). Not investment advice.
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var sections = document.querySelectorAll('.tier-section');
+  var links = document.querySelectorAll('.sticky-nav-inner a.sn-link');
+  function onScroll(){
+    var scrollY = window.scrollY + 120;
+    var current = '';
+    sections.forEach(function(s){ if(s.offsetTop <= scrollY) current = s.id; });
+    links.forEach(function(a){
+      var href = a.getAttribute('href');
+      a.style.borderColor = (href === '#'+current) ? 'var(--accent)' : '';
+      a.style.color = (href === '#'+current) ? 'var(--txt)' : '';
+    });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+})();
+</script>
+</body>
+</html>

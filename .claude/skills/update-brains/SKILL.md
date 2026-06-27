@@ -1,6 +1,6 @@
 ---
 name: update-brains
-description: Refresh and rebuild every brain corpus + BM25 index used by trading-analysis and the standalone brain skills — Jensen, Leopold, Jordi, Gavin, and the X Brain (keyless FinTwit/AI posts via Nitter RSS + a Google-News proxy lane, whose analyze step also refreshes the dashboard Research-tab data). Pulls the latest NVIDIA news (Jensen), re-fetches the Situational Awareness essay + whitelisted interviews (Leopold), the @JordiVisserLabs channel + news (Jordi), Gavin Baker appearances + news (Gavin), and the X corpus, then rebuilds each index so new material goes live. Use when the user asks to "update the brains", refresh/rebuild any brain corpus (Jensen/Leopold/Jordi/Gavin/X), pull the latest news into a brain, or add new transcripts/interviews/materials/posts to a brain.
+description: Refresh and rebuild every brain corpus + BM25 index used by trading-analysis and the standalone brain skills — Jensen, Leopold, Jordi, Gavin, Dan Ives, and the X Brain (keyless FinTwit/AI posts via Nitter RSS + a Google-News proxy lane, whose analyze step also refreshes the dashboard Research-tab data). Pulls the latest NVIDIA news (Jensen), re-fetches the Situational Awareness essay + whitelisted interviews (Leopold), the @JordiVisserLabs channel + news (Jordi), Gavin Baker appearances + news (Gavin), Dan Ives appearances + news (Dan Ives), and the X corpus, then rebuilds each index so new material goes live. Use when the user asks to "update the brains", refresh/rebuild any brain corpus (Jensen/Leopold/Jordi/Gavin/Dan Ives/X), pull the latest news into a brain, or add new transcripts/interviews/materials/posts to a brain.
 ---
 
 # Update Brains
@@ -16,11 +16,12 @@ material to take effect.
 From the TradingAgents repo root:
 
 ```bash
-scripts/update_brains.sh            # refresh + rebuild ALL brains (jensen+leopold+jordi+gavin+x)
+scripts/update_brains.sh            # refresh + rebuild ALL brains (jensen+leopold+jordi+gavin+dan-ives+x)
 scripts/update_brains.sh jensen     # only the Jensen Brain
 scripts/update_brains.sh leopold    # only the Leopold Brain
 scripts/update_brains.sh jordi      # only the Jordi Brain
 scripts/update_brains.sh gavin      # only the Gavin Brain
+scripts/update_brains.sh dan-ives   # only the Dan Ives Brain
 scripts/update_brains.sh x          # only the X Brain (FinTwit/AI + Research-tab data)
 ```
 
@@ -44,7 +45,7 @@ approved ones, and rebuild:
 - **Leopold** — `work/fetch_situational_awareness.py` (essay) + `work/fetch_interviews.py`
   (whitelist) → `work/discover_new.py` → `work/purity.py` → `work/ingest_pending.py` →
   `index/build_index.py`.
-- **Jordi / Gavin** — channel/appearance fetch + keyless news lane → `index/build_index.py`.
+- **Jordi / Gavin / Dan Ives** — channel/appearance fetch + keyless news lane → `index/build_index.py`.
 - **X** — `work/fetch_accounts.py` (curated FinTwit/AI handles via keyless Nitter RSS;
   best-effort, degrades gracefully if no instance answers) + `work/fetch_trends.py`
   (Google-News proxy lane for AI trends + stock chatter) → `index/build_index.py` →

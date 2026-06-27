@@ -11,6 +11,8 @@
 #                   a keyless news lane. Single owned channel, so no purity filter needed.
 #   Gavin Brain   = what Gavin Baker *said* (long-form guest appearances — BG2, Invest
 #                   Like the Best, Aleph, a16z… via STRICT search+purity) + a news lane.
+#   Dan Ives Brain = what Dan Ives *said* (media appearances — CNBC, Bloomberg, Fox
+#                   Business, Yahoo Finance… via STRICT search+purity) + a news lane.
 #   X Brain       = what FinTwit/AI *posts* (curated accounts via keyless Nitter RSS) +
 #                   a Google-News proxy lane; also recomputes research.json (trending AI
 #                   topics + most-bullish names) for the dashboard's Research tab.
@@ -26,6 +28,7 @@
 #   scripts/update_brains.sh jensen     # only the Jensen Brain
 #   scripts/update_brains.sh leopold    # only the Leopold Brain
 #   scripts/update_brains.sh jordi      # only the Jordi Brain
+#   scripts/update_brains.sh dan-ives   # only the Dan Ives Brain
 #   scripts/update_brains.sh ingest     # transcribe the human-REVIEWED pending_*.tsv tier
 #                                       #   (only needed for the 'review' uncertain bucket)
 #
@@ -48,6 +51,7 @@ JENSEN_HOME="${JENSEN_HOME:-/home/ewexler/projects/jensen-brain}"
 LEOPOLD_HOME="${LEOPOLD_HOME:-/home/ewexler/projects/leopold-brain}"
 JORDI_HOME="${JORDI_HOME:-/home/ewexler/projects/jordi-brain}"
 GAVIN_HOME="${GAVIN_HOME:-/home/ewexler/projects/gavin-brain}"
+DAN_IVES_HOME="${DAN_IVES_HOME:-/home/ewexler/projects/dan-ives-brain}"
 X_HOME="${X_HOME:-/home/ewexler/projects/x-brain}"
 PY="${PYTHON:-python3}"
 WHICH="${1:-both}"
@@ -116,6 +120,21 @@ update_gavin() {
   echo "   chunks: $before -> $(chunks "$GAVIN_HOME")"
 }
 
+update_dan_ives() {
+  echo "================ DAN IVES BRAIN ($DAN_IVES_HOME) ================"
+  if [ ! -d "$DAN_IVES_HOME" ]; then echo "  [skip] not found"; return; fi
+  local before; before=$(chunks "$DAN_IVES_HOME")
+  echo "-- discover new Dan Ives appearances since watermark + STRICT purity-filter --"
+  ( cd "$DAN_IVES_HOME" && "$PY" work/discover_new.py ) || echo "  [warn] discovery skipped (yt-dlp missing / offline?)"
+  echo "-- auto-ingest purity-approved videos (auto_dan_ives.tsv) --"
+  ( cd "$DAN_IVES_HOME" && "$PY" work/ingest_pending.py ) || echo "  [warn] auto-ingest failed"
+  echo "-- fetch latest Dan Ives news (keyless Google News RSS, idempotent) --"
+  ( cd "$DAN_IVES_HOME" && "$PY" work/fetch_news.py ) || echo "  [warn] news fetch failed (offline?)"
+  echo "-- rebuild index --"
+  ( cd "$DAN_IVES_HOME" && "$PY" index/build_index.py )
+  echo "   chunks: $before -> $(chunks "$DAN_IVES_HOME")"
+}
+
 update_x() {
   echo "================ X BRAIN ($X_HOME) ================"
   if [ ! -d "$X_HOME" ]; then echo "  [skip] not found"; return; fi
@@ -145,24 +164,26 @@ ingest_brain() {
 }
 
 case "$WHICH" in
-  jensen)  update_jensen ;;
-  leopold) update_leopold ;;
-  jordi)   update_jordi ;;
-  gavin)   update_gavin ;;
-  x)       update_x ;;
-  both|all|"") update_jensen; echo; update_leopold; echo; update_jordi; echo; update_gavin; echo; update_x ;;
-  ingest)  ingest_brain "$JENSEN_HOME" "JENSEN" "pending_jensen.tsv"; echo; ingest_brain "$LEOPOLD_HOME" "LEOPOLD" "pending_leopold.tsv"; echo; ingest_brain "$GAVIN_HOME" "GAVIN" "pending_gavin.tsv" ;;
-  ingest-jensen)  ingest_brain "$JENSEN_HOME" "JENSEN" "pending_jensen.tsv" ;;
-  ingest-leopold) ingest_brain "$LEOPOLD_HOME" "LEOPOLD" "pending_leopold.tsv" ;;
-  ingest-gavin)   ingest_brain "$GAVIN_HOME" "GAVIN" "pending_gavin.tsv" ;;
-  *) echo "usage: $0 [jensen|leopold|jordi|gavin|x|both|ingest|ingest-jensen|ingest-leopold|ingest-gavin]"; exit 2 ;;
+  jensen)    update_jensen ;;
+  leopold)   update_leopold ;;
+  jordi)     update_jordi ;;
+  gavin)     update_gavin ;;
+  dan-ives)  update_dan_ives ;;
+  x)         update_x ;;
+  both|all|"") update_jensen; echo; update_leopold; echo; update_jordi; echo; update_gavin; echo; update_dan_ives; echo; update_x ;;
+  ingest)  ingest_brain "$JENSEN_HOME" "JENSEN" "pending_jensen.tsv"; echo; ingest_brain "$LEOPOLD_HOME" "LEOPOLD" "pending_leopold.tsv"; echo; ingest_brain "$GAVIN_HOME" "GAVIN" "pending_gavin.tsv"; echo; ingest_brain "$DAN_IVES_HOME" "DAN-IVES" "pending_dan_ives.tsv" ;;
+  ingest-jensen)    ingest_brain "$JENSEN_HOME" "JENSEN" "pending_jensen.tsv" ;;
+  ingest-leopold)   ingest_brain "$LEOPOLD_HOME" "LEOPOLD" "pending_leopold.tsv" ;;
+  ingest-gavin)     ingest_brain "$GAVIN_HOME" "GAVIN" "pending_gavin.tsv" ;;
+  ingest-dan-ives)  ingest_brain "$DAN_IVES_HOME" "DAN-IVES" "pending_dan_ives.tsv" ;;
+  *) echo "usage: $0 [jensen|leopold|jordi|gavin|dan-ives|x|both|ingest|ingest-jensen|ingest-leopold|ingest-gavin|ingest-dan-ives]"; exit 2 ;;
 esac
 
 echo
-case "$WHICH" in ingest|ingest-jensen|ingest-leopold|ingest-gavin) SKIP_REVIEW=1;; *) SKIP_REVIEW=0;; esac
+case "$WHICH" in ingest|ingest-jensen|ingest-leopold|ingest-gavin|ingest-dan-ives) SKIP_REVIEW=1;; *) SKIP_REVIEW=0;; esac
 if [ "$SKIP_REVIEW" = 0 ]; then
   echo "Approved videos were auto-ingested. OPTIONAL: review the 'uncertain' tier if any:"
-  for f in "$JENSEN_HOME/work/pending_jensen.tsv" "$LEOPOLD_HOME/work/pending_leopold.tsv" "$GAVIN_HOME/work/pending_gavin.tsv"; do
+  for f in "$JENSEN_HOME/work/pending_jensen.tsv" "$LEOPOLD_HOME/work/pending_leopold.tsv" "$GAVIN_HOME/work/pending_gavin.tsv" "$DAN_IVES_HOME/work/pending_dan_ives.tsv"; do
     [ -f "$f" ] && echo "  \$EDITOR $f   ($(grep -vc '^#' "$f" 2>/dev/null) row(s))"
   done
   echo "  then: scripts/update_brains.sh ingest      # transcribe the ones you keep"
@@ -170,8 +191,9 @@ if [ "$SKIP_REVIEW" = 0 ]; then
   echo
 fi
 echo "Done. Verify with:"
-echo "  python3 $JENSEN_HOME/index/search.py  'AI factory power grid data center' --k 3"
-echo "  python3 $LEOPOLD_HOME/index/search.py 'trillion dollar cluster power electricity' --k 3"
-echo "  python3 $JORDI_HOME/index/search.py   'AI capex scarcity SaaS disruption bitcoin' --k 3"
-echo "  python3 $GAVIN_HOME/index/search.py   'AI sustaining disruptive compute moat NVIDIA' --k 3"
-echo "  python3 $X_HOME/index/search.py       'NVDA AI datacenter bullish' --k 3"
+echo "  python3 $JENSEN_HOME/index/search.py    'AI factory power grid data center' --k 3"
+echo "  python3 $LEOPOLD_HOME/index/search.py   'trillion dollar cluster power electricity' --k 3"
+echo "  python3 $JORDI_HOME/index/search.py     'AI capex scarcity SaaS disruption bitcoin' --k 3"
+echo "  python3 $GAVIN_HOME/index/search.py     'AI sustaining disruptive compute moat NVIDIA' --k 3"
+echo "  python3 $DAN_IVES_HOME/index/search.py  'Apple Microsoft AI monetization golden age' --k 3"
+echo "  python3 $X_HOME/index/search.py         'NVDA AI datacenter bullish' --k 3"

@@ -226,6 +226,10 @@ reports/
 # use glob + negation so hand-crafted files (jensen.html) can be tracked
 /dashboard/*
 !/dashboard/jensen.html
+!/dashboard/leopold.html
+!/dashboard/jordi.html
+!/dashboard/gavin.html
+!/dashboard/dan-ives.html
 
 # eval/ benchmark local price cache (regenerated on demand)
 eval/.price_cache/

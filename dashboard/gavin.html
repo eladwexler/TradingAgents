@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gavin Brain — Sustaining vs. Disruptive AI</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .tier1{--tc:#2ea043;--tb:#2ea04322;--tborder:#2ea04366}
+  .tier2{--tc:#58a6ff;--tb:#1f6feb22;--tborder:#1f6feb66}
+  .tier3{--tc:#d29922;--tb:#d2992218;--tborder:#d2992266}
+  .tier4{--tc:#8957e5;--tb:#8957e522;--tborder:#8957e566}
+  .tier5{--tc:#db6d28;--tb:#db6d2818;--tborder:#db6d2866}
+  .tier6{--tc:#8b98a5;--tb:#8b98a512;--tborder:#8b98a540}
+
+  .tier-badge{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.04em;
+    background:var(--tb);border:1px solid var(--tborder);color:var(--tc);white-space:nowrap
+  }
+  .tier-section{margin:0 0 40px;scroll-margin-top:80px}
+  .tier-head{
+    display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+    border-left:3px solid var(--tc);padding-left:12px;margin:0 0 14px
+  }
+  .tier-head h2{margin:0;font-size:17px;color:var(--txt);text-transform:none;letter-spacing:0}
+  .tier-head .tier-sub{font-size:12px;color:var(--muted)}
+  .jcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+  .jcard{
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:14px 16px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s
+  }
+  .jcard:hover{border-color:var(--accent)}
+  .jcard-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .jcard-tk{font-size:18px;font-weight:800;min-width:60px;color:var(--accent);text-decoration:none}
+  .jcard-tk:hover{text-decoration:underline}
+  .jcard-tk.nolink{color:var(--txt);cursor:default;pointer-events:none}
+  .jcard-type{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+  .jcard-name{font-size:12px;color:var(--muted)}
+  .jcard-quote{
+    font-size:12px;color:var(--txt);line-height:1.55;
+    border-left:2px solid var(--tborder);padding-left:10px;font-style:italic;opacity:.85
+  }
+  .jcard-hits{font-size:11px;color:var(--muted)}
+  .j-hero{
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:22px 24px;margin:0 0 28px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap
+  }
+  .j-hero-icon{font-size:48px;line-height:1}
+  .j-hero-body h1{margin:0 0 6px;font-size:22px}
+  .j-hero-body p{margin:0;font-size:13px;color:var(--muted);max-width:680px;line-height:1.6}
+  .j-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 28px}
+  .j-stat{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .j-stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .j-stat .v{font-size:22px;font-weight:700;margin-top:4px}
+  .j-stat .v small{font-size:12px;font-weight:500;color:var(--muted)}
+  .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;
+    text-decoration:none;margin-bottom:20px}
+  .back-link:hover{color:var(--txt)}
+  .sticky-nav{
+    position:sticky;top:0;z-index:10;background:var(--bg);
+    border-bottom:1px solid var(--border);padding:6px 0 8px;margin:0 0 24px
+  }
+  .sticky-nav-inner{max-width:1180px;margin:0 auto;padding:0 20px;
+    display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .sticky-nav-inner a.sn-link{
+    font-size:12px;font-weight:600;padding:3px 12px;border-radius:14px;
+    border:1px solid var(--border);color:var(--muted);text-decoration:none;
+    transition:border-color .15s,color .15s
+  }
+  .sticky-nav-inner a.sn-link:hover{border-color:var(--accent);color:var(--txt)}
+  .sticky-nav-inner .sn-label{font-size:12px;color:var(--muted);margin-right:4px}
+  .sustaining-badge{background:#2ea04318;border:1px solid #2ea04366;color:#2ea043;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .disruptive-badge{background:#f8514918;border:1px solid #f8514966;color:#f85149;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .mixed-badge{background:#d2992218;border:1px solid #d2992266;color:#d29922;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<div class="sticky-nav">
+  <div class="sticky-nav-inner">
+    <span class="sn-label">Jump:</span>
+    <a class="sn-link" href="#tier1">T1 · Conviction Sustaining</a>
+    <a class="sn-link" href="#tier2">T2 · Courageous Betters</a>
+    <a class="sn-link" href="#tier3">T3 · Possible / Framework Fit</a>
+    <a class="sn-link" href="#tier4">T4 · Complex / Mixed</a>
+    <a class="sn-link" href="#tier5">T5 · Margin Fear Risk</a>
+    <a class="sn-link" href="#tier6">T6 · Insufficient Evidence</a>
+    <a class="sn-link" href="index.html" style="margin-left:auto;border-color:#30363d">← Main Dashboard</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <a href="index.html" class="back-link">← Back to Main Dashboard</a>
+
+  <div class="j-hero">
+    <div class="j-hero-icon">⚡</div>
+    <div class="j-hero-body">
+      <h1>Gavin Brain — Sustaining vs. Disruptive AI</h1>
+      <p>Gavin Baker (Atreides Management, ex-Fidelity OTC) frames AI through Clayton Christensen's lens: <strong>sustaining innovations</strong> strengthen incumbents with data/scale moats; <strong>disruptive innovations</strong> destroy them. His "most extraordinary moment in the history of capitalism" framing — Anthropic adding $11B ARR in one month, equivalent to what Palantir + Snowflake + Databricks built over a decade — is both a bull case for AI and a warning that the old SaaS playbook is obsolete. Gavin's conviction: own compute moats, back the leaders who adapt, be skeptical of gross-margin defense.</p>
+    </div>
+  </div>
+
+  <div class="j-stats">
+    <div class="j-stat"><div class="k">Corpus</div><div class="v">1,011<small> chunks</small></div></div>
+    <div class="j-stat"><div class="k">Transcripts</div><div class="v">12<small> long-form appearances</small></div></div>
+    <div class="j-stat"><div class="k">Core lens</div><div class="v" style="font-size:12px">Sustaining vs. disruptive innovation</div></div>
+    <div class="j-stat"><div class="k">Conviction quote</div><div class="v" style="font-size:11px">"Nothing like this has ever happened in capitalism"</div></div>
+    <div class="j-stat"><div class="k">Last refreshed</div><div class="v" style="font-size:14px">2026-06-27</div></div>
+  </div>
+
+  <section class="tier-section tier1" id="tier1">
+    <div class="tier-head">
+      <h2>Tier 1 — Conviction: Sustaining AI Moat</h2>
+      <span class="tier-sub">Companies with data/scale advantages that AI strengthens, not weakens — Gavin's highest conviction</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="NVDA_2026-06-24.html" class="jcard-tk">NVDA</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="sustaining-badge">Sustaining Moat</span>
+          <span class="jcard-type">GPU monopoly · Compounding moat · Out-executing competitors</span>
+        </div>
+        <div class="jcard-name">NVIDIA — GPU accelerators; Gavin's highest-conviction sustaining moat in AI</div>
+        <div class="jcard-quote">"I just was shocked… their biggest one thing they emphasized is we thought the world would be consuming less Nvidia than it is and if anything, Nvidia is accelerating and they just continue to out execute their competitors. And I think a lot of people are indexing to the OpenAI gigawatt and Nvidia has 10." The more compute demand grows, the more NVDA's ecosystem lock-in (CUDA, NIM, NvLink) compounds — classic sustaining innovation.</div>
+        <div class="jcard-hits">Highest mention count across corpus · "continue to out execute" · sustaining moat thesis at scale</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier2" id="tier2">
+    <div class="tier-head">
+      <h2>Tier 2 — The Courageous Betters</h2>
+      <span class="tier-sub">Leaders who made bold, risky decisions to build their own AI stack — Gavin gives them explicit credit</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="MSFT_2026-06-24.html" class="jcard-tk">MSFT</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="sustaining-badge">Courageous Bet</span>
+          <span class="jcard-type">OpenAI partnership · Own-model bet · Frontier transition</span>
+        </div>
+        <div class="jcard-name">Microsoft — Satya Nadella's decision to build frontier models rather than just serve OpenAI capacity</div>
+        <div class="jcard-quote">"I think he's making good decisions that are risky decisions to position Microsoft for this world where frontier models are no longer API accessible… he is forgoing, I mean, Microsoft probably be an $800 stock today if they were using their GPUs to serve OpenAI solely. So I give him a lot of credit for making a great decision." Gavin explicitly calls Satya's bet "courageous" — a company choosing long-term position over near-term stock price.</div>
+        <div class="jcard-hits">Named in 139 corpus chunks across Jensen AND Gavin corpora · "courageous decision" framing explicit</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="AMZN_2026-06-20.html" class="jcard-tk">AMZN</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="sustaining-badge">Most Engaged</span>
+          <span class="jcard-type">Most startup-engaged hyperscaler · AWS AI layer</span>
+        </div>
+        <div class="jcard-name">Amazon / AWS — the most deeply engaged hyperscaler with the startup ecosystem</div>
+        <div class="jcard-quote">"The two companies who are the most deeply engaged with startups are Amazon and NVIDIA by a mile. Then there's a really intense engagement with Google. Then Broadcom… and then you see essentially zero engagement with startups from AMD, Microsoft, and Meta." Gavin's startup-engagement thesis: the hyperscaler that helps the most startups will be the dominant AI cloud. Amazon wins that race today.</div>
+        <div class="jcard-hits">Explicit "most deeply engaged with startups" · startup-engagement as AI cloud moat predictor</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier3" id="tier3">
+    <div class="tier-head">
+      <h2>Tier 3 — Possible: Framework Fit, No Direct Call</h2>
+      <span class="tier-sub">Names that fit the sustaining-or-disruptive framework but Gavin hasn't called directly</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="AVGO_2026-06-24.html" class="jcard-tk">AVGO</a>
+          <span class="tier-badge tier3">Tier 3</span>
+          <span class="mixed-badge">Framework Fit</span>
+          <span class="jcard-type">Custom ASIC · Everyone's favorite supplier · Multi-gigawatt</span>
+        </div>
+        <div class="jcard-name">Broadcom — custom AI ASICs; Gavin notes it's "everyone's favorite ASIC supplier"</div>
+        <div class="jcard-quote">"Broadcom is engaged in a different way. They're just, you know, everybody's favorite ASIC supplier. Like it's considered like a level up if you get to work with Broadcom for your second gen chip." Gavin observes Broadcom's market position but frames it more as an ecosystem role than a conviction pick — the "sustaining" vs "disruptive" tension of ASIC vs NVDA GPU is unresolved in his framework.</div>
+        <div class="jcard-hits">Multi-gigawatt ASIC demand context · 10GW with Google · framework fit but no direct conviction call</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="GOOGL_2026-06-20.html" class="jcard-tk">GOOGL</a>
+          <span class="tier-badge tier3">Tier 3</span>
+          <span class="mixed-badge">Framework Fit</span>
+          <span class="jcard-type">DeepMind · Intense startup engagement · TPU/ASIC</span>
+        </div>
+        <div class="jcard-name">Alphabet / Google — DeepMind, intense startup engagement ranked #3 after AMZN and NVDA</div>
+        <div class="jcard-quote">"They're next most intense [after Amazon and NVIDIA]. Google is intensely engaged with startups." Google has an AI-native advantage (DeepMind, Gemini, TPUs, Search data) that Gavin acknowledges — but the open-source TPU strategy vs NVDA lock-in creates the same sustaining vs. disruptive tension he hasn't fully resolved.</div>
+        <div class="jcard-hits">Startup engagement ranked #3 · DeepMind AGI research · framework fit without explicit conviction</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">PLTR</span>
+          <span class="tier-badge tier3">Tier 3</span>
+          <span class="mixed-badge">Complicated</span>
+          <span class="jcard-type">Ontology moat · Anthropic competitive reference</span>
+        </div>
+        <div class="jcard-name">Palantir Technologies — cited as one of the companies Anthropic's ARR rate implicitly threatens</div>
+        <div class="jcard-quote">"The three highest profile SaaS companies to have kind of been founded in the last 10, 12 years are Palantir, Snowflake, and Databricks. And these three companies have spent and employed thousands of people, tens of thousands collectively. They've all spent 10 years building their businesses. And Anthropic added their combined businesses in 1 month." Gavin uses PLTR as a reference point — not a bearish call, but a sobering comparison to Anthropic's velocity.</div>
+        <div class="jcard-hits">Referenced as "10 years to build what Anthropic did in 1 month" · complicated — government/defense moat may sustain · no explicit call</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier4" id="tier4">
+    <div class="tier-head">
+      <h2>Tier 4 — Complex: Each Hyperscaler's Own Race</h2>
+      <span class="tier-sub">"Pre-AI they were in separate swim lanes. Post-AI they're all in the same race."</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">META</span>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="mixed-badge">Zero Startup Engagement</span>
+          <span class="jcard-type">LLaMA open-source · Zero startup engagement · Same race</span>
+        </div>
+        <div class="jcard-name">Meta Platforms — in the same AI race as all hyperscalers, but zero startup engagement</div>
+        <div class="jcard-quote">"You see essentially zero engagement with startups from AMD, Microsoft, and Meta." Gavin's startup-engagement framework is a proxy for AI ecosystem position. Meta's open-source LLaMA strategy is a different bet — commoditize the model layer to capture the social graph. The jury is out on whether that's sustaining (open ecosystem = more users) or disruptive-by-intent (LLaMA kills proprietary model moats).</div>
+        <div class="jcard-hits">Zero startup engagement flag · LLaMA = commoditize models · hyperscaler same-race complexity</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">SNOW</span>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="mixed-badge">Complicated</span>
+          <span class="jcard-type">SaaS → AI pivot · Data platform · Gross margin pressure</span>
+        </div>
+        <div class="jcard-name">Snowflake — cloud data warehouse; cited alongside Palantir as a 10-year SaaS build</div>
+        <div class="jcard-quote">"It is definitionally impossible given what we just discussed to succeed in AI without gross margin pressure. And I do not know why they have concerns because we have an existence proof that a software company can deal well with declining margins in Microsoft and Adobe." Gavin sees SNOW's data-moat as real but warns: resist gross-margin defense and you fail. Snowflake's data gravity could sustain — but only if it accepts the margin trade-off.</div>
+        <div class="jcard-hits">10-year SaaS build vs. Anthropic 1-month reference · gross margin fear risk · data platform moat possible</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier5" id="tier5">
+    <div class="tier-head">
+      <h2>Tier 5 — Risk: The Gross Margin Fear Trap</h2>
+      <span class="tier-sub">Companies that try to protect existing margins rather than invest in AI — Gavin's clearest bearish signal</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">SaaS</span>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="disruptive-badge">Margin Fear = Failure</span>
+          <span class="jcard-type">Application SaaS · Gross margin defense · AI disruption risk</span>
+        </div>
+        <div class="jcard-name">Application SaaS companies that resist gross margin pressure as AI investments scale</div>
+        <div class="jcard-quote">"I worry that application SaaS companies are trying to preserve their existing gross margin structures because they believe that if their gross margins go down their stocks will go down. It is definitionally impossible given what we just discussed to succeed in AI without gross margin pressure. Don't be scared — look at declining gross margins as a mark of success rather than a badge of shame." Gavin's clearest bear thesis: the SaaS company that optimizes for today's margin will lose to the one that invests to earn AI-native capability.</div>
+        <div class="jcard-hits">Explicit warning repeated across multiple appearances · "definitionally impossible to succeed in AI without margin pressure"</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">AMD</span>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="mixed-badge">Zero Startup Engagement</span>
+          <span class="jcard-type">GPU #2 · Zero startup engagement · Gavin skeptical</span>
+        </div>
+        <div class="jcard-name">Advanced Micro Devices — NVDA's GPU competitor; Gavin flags zero startup ecosystem engagement</div>
+        <div class="jcard-quote">"You see essentially zero engagement with startups from AMD, Microsoft, and Meta." For Gavin, AMD's weakest signal isn't chips — it's ecosystem. The GPU business is a commodity without the software layer (CUDA equivalent) and the startup ecosystem feeding product-market feedback. AMD has $6B contracted gigawatts but the ecosystem gap is real.</div>
+        <div class="jcard-hits">Zero startup engagement flag · GPU commodity risk · ecosystem gap vs NVDA CUDA</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier6" id="tier6">
+    <div class="tier-head">
+      <h2>Tier 6 — Insufficient Evidence</h2>
+      <span class="tier-sub">Outside Gavin's stated framework or not named directly in corpus — do not infer a verdict</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">—</span>
+          <span class="tier-badge tier6">Tier 6</span>
+          <span class="jcard-type">Outside corpus · No direct mention</span>
+        </div>
+        <div class="jcard-name">Any name not directly discussed in Gavin's 12 long-form appearances</div>
+        <div class="jcard-quote">Gavin's framework is powerful but his corpus is selective — he goes deep on the compute layer and hyperscalers, but rarely covers semis below NVDA/AVGO, hardware, energy, or non-tech sectors. A name without direct Gavin mention should be classified "Insufficient evidence" — not inferred from thematic proximity alone.</div>
+        <div class="jcard-hits">1,011 corpus chunks · 12 transcripts · deep but narrow coverage universe</div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="disclaimer" style="font-size:12px;color:var(--muted);margin-top:32px;padding-top:16px;border-top:1px solid var(--border)">
+    Source: Gavin Brain corpus — 1,011 chunks from 12 long-form appearances (BG2, Invest Like the Best, Aleph, a16z, etc.) + news lane.
+    Last rebuilt: 2026-06-27. Tier classification is editorial based on Gavin's sustaining/disruptive framework and direct quotes.
+    Atreides Management is a hedge fund with no public 13F. Not investment advice.
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var sections = document.querySelectorAll('.tier-section');
+  var links = document.querySelectorAll('.sticky-nav-inner a.sn-link');
+  function onScroll(){
+    var scrollY = window.scrollY + 120;
+    var current = '';
+    sections.forEach(function(s){ if(s.offsetTop <= scrollY) current = s.id; });
+    links.forEach(function(a){
+      var href = a.getAttribute('href');
+      a.style.borderColor = (href === '#'+current) ? 'var(--accent)' : '';
+      a.style.color = (href === '#'+current) ? 'var(--txt)' : '';
+    });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+})();
+</script>
+</body>
+</html>

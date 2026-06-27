@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dan Ives Brain — 4th Industrial Revolution</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .tier1{--tc:#2ea043;--tb:#2ea04322;--tborder:#2ea04366}
+  .tier2{--tc:#58a6ff;--tb:#1f6feb22;--tborder:#1f6feb66}
+  .tier3{--tc:#d29922;--tb:#d2992218;--tborder:#d2992266}
+  .tier4{--tc:#8957e5;--tb:#8957e522;--tborder:#8957e566}
+  .tier5{--tc:#db6d28;--tb:#db6d2818;--tborder:#db6d2866}
+  .tier6{--tc:#8b98a5;--tb:#8b98a512;--tborder:#8b98a540}
+
+  .tier-badge{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.04em;
+    background:var(--tb);border:1px solid var(--tborder);color:var(--tc);white-space:nowrap
+  }
+  .tier-section{margin:0 0 40px;scroll-margin-top:80px}
+  .tier-head{
+    display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+    border-left:3px solid var(--tc);padding-left:12px;margin:0 0 14px
+  }
+  .tier-head h2{margin:0;font-size:17px;color:var(--txt);text-transform:none;letter-spacing:0}
+  .tier-head .tier-sub{font-size:12px;color:var(--muted)}
+  .jcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+  .jcard{
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:14px 16px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s
+  }
+  .jcard:hover{border-color:var(--accent)}
+  .jcard-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .jcard-tk{font-size:18px;font-weight:800;min-width:60px;color:var(--accent);text-decoration:none}
+  .jcard-tk:hover{text-decoration:underline}
+  .jcard-tk.nolink{color:var(--txt);cursor:default;pointer-events:none}
+  .jcard-type{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+  .jcard-name{font-size:12px;color:var(--muted)}
+  .jcard-quote{
+    font-size:12px;color:var(--txt);line-height:1.55;
+    border-left:2px solid var(--tborder);padding-left:10px;font-style:italic;opacity:.85
+  }
+  .jcard-hits{font-size:11px;color:var(--muted)}
+  .j-hero{
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:22px 24px;margin:0 0 28px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap
+  }
+  .j-hero-icon{font-size:48px;line-height:1}
+  .j-hero-body h1{margin:0 0 6px;font-size:22px}
+  .j-hero-body p{margin:0;font-size:13px;color:var(--muted);max-width:680px;line-height:1.6}
+  .j-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 28px}
+  .j-stat{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .j-stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .j-stat .v{font-size:22px;font-weight:700;margin-top:4px}
+  .j-stat .v small{font-size:12px;font-weight:500;color:var(--muted)}
+  .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;
+    text-decoration:none;margin-bottom:20px}
+  .back-link:hover{color:var(--txt)}
+  .sticky-nav{
+    position:sticky;top:0;z-index:10;background:var(--bg);
+    border-bottom:1px solid var(--border);padding:6px 0 8px;margin:0 0 24px
+  }
+  .sticky-nav-inner{max-width:1180px;margin:0 auto;padding:0 20px;
+    display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .sticky-nav-inner a.sn-link{
+    font-size:12px;font-weight:600;padding:3px 12px;border-radius:14px;
+    border:1px solid var(--border);color:var(--muted);text-decoration:none;
+    transition:border-color .15s,color .15s
+  }
+  .sticky-nav-inner a.sn-link:hover{border-color:var(--accent);color:var(--txt)}
+  .sticky-nav-inner .sn-label{font-size:12px;color:var(--muted);margin-right:4px}
+  .top-pick{background:#2ea04322;border:1px solid #2ea04366;color:#2ea043;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .overweight{background:#1f6feb22;border:1px solid #1f6feb66;color:#58a6ff;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .constructive{background:#d2992218;border:1px solid #d2992266;color:#d29922;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .watch-badge{background:#db6d2818;border:1px solid #db6d2866;color:#db6d28;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<div class="sticky-nav">
+  <div class="sticky-nav-inner">
+    <span class="sn-label">Jump:</span>
+    <a class="sn-link" href="#tier1">T1 · Top Picks</a>
+    <a class="sn-link" href="#tier2">T2 · AI Core / Mag-7</a>
+    <a class="sn-link" href="#tier3">T3 · Cybersecurity</a>
+    <a class="sn-link" href="#tier4">T4 · Enterprise Software</a>
+    <a class="sn-link" href="#tier5">T5 · EV / Autonomous</a>
+    <a class="sn-link" href="#tier6">T6 · Outside Coverage</a>
+    <a class="sn-link" href="index.html" style="margin-left:auto;border-color:#30363d">← Main Dashboard</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <a href="index.html" class="back-link">← Back to Main Dashboard</a>
+
+  <div class="j-hero">
+    <div class="j-hero-icon">🔮</div>
+    <div class="j-hero-body">
+      <h1>Dan Ives Brain — 4th Industrial Revolution</h1>
+      <p>Dan Ives (Wedbush Securities, Managing Director Tech Research) is Wall Street's loudest AI bull. His thesis: we are in the "Golden Age of AI" — a 4th industrial revolution where AI monetization is just entering the 3rd inning. His framework: every company in his coverage either <strong>monetizes AI directly</strong> (Microsoft Copilot, Apple Intelligence, Palantir federal AI) or <strong>enables the infrastructure</strong> (NVDA, cybersecurity). He covers primarily US large-cap tech (AAPL, MSFT, GOOGL, META, AMZN), enterprise software (CRM, NOW, PLTR), cybersecurity (CRWD, PANW, ZS), and EV/autonomous (TSLA).</p>
+    </div>
+  </div>
+
+  <div class="j-stats">
+    <div class="j-stat"><div class="k">Corpus</div><div class="v">460<small> chunks</small></div></div>
+    <div class="j-stat"><div class="k">Transcripts</div><div class="v">23<small> media appearances</small></div></div>
+    <div class="j-stat"><div class="k">News materials</div><div class="v">248<small> items</small></div></div>
+    <div class="j-stat"><div class="k">Core framing</div><div class="v" style="font-size:12px">"3rd inning of Golden Age of AI"</div></div>
+    <div class="j-stat"><div class="k">Last refreshed</div><div class="v" style="font-size:14px">2026-06-27</div></div>
+  </div>
+
+  <section class="tier-section tier1" id="tier1">
+    <div class="tier-head">
+      <h2>Tier 1 — Top Picks: Explicit Buy / Outperform</h2>
+      <span class="tier-sub">Dan Ives named these directly with Buy/Outperform + conviction narrative — his highest-conviction calls</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="MSFT_2026-06-24.html" class="jcard-tk">MSFT</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="top-pick">Top Pick</span>
+          <span class="jcard-type">OpenAI partnership · Copilot monetization · Azure AI</span>
+        </div>
+        <div class="jcard-name">Microsoft — Dan Ives's #1 AI monetization play; Satya Nadella as "the Picasso of tech"</div>
+        <div class="jcard-quote">"Microsoft is the most important AI company in the world when you think about Copilot monetization, when you think about Azure, when you think about the OpenAI relationship. Satya is Picasso in terms of this AI monetization story." Dan Ives rates MSFT as the clearest expression of AI monetization — it's not just a tool, it's the monetization engine that collects the AI tax on every enterprise productivity workflow.</div>
+        <div class="jcard-hits">Named explicitly and repeatedly across corpus · "most important AI company" · Copilot = direct monetization · Outperform rating</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">AAPL</span>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="top-pick">Top Pick</span>
+          <span class="jcard-type">Apple Intelligence · 1.4B device install base · Supercycle</span>
+        </div>
+        <div class="jcard-name">Apple — Dan Ives's "golden opportunity" call; 1.4B iPhones as AI distribution moat</div>
+        <div class="jcard-quote">"Apple has the golden opportunity in front of them. You have 1.4 billion iPhones out there — that's why this is a potential supercycle driven by Apple Intelligence." Dan Ives has been the loudest Apple bull on Wall Street, framing iPhone 17/18 as an AI-driven upgrade cycle. Wedbush PT: $325. Apple's moat: 1.4B devices = the most powerful AI distribution network on earth.</div>
+        <div class="jcard-hits">Core Top Pick · $325 PT Wedbush · "supercycle" narrative · Apple Intelligence = AI monetization at consumer scale</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="PLTR_2026-06-24.html" class="jcard-tk">PLTR</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="top-pick">Top Pick</span>
+          <span class="jcard-type">Federal AI · AIP platform · Enterprise AI OS</span>
+        </div>
+        <div class="jcard-name">Palantir — Dan Ives sees PLTR as the "Oracle of AI" for the federal government</div>
+        <div class="jcard-quote">"Palantir is the Oracle of AI — they are the enterprise AI operating system for the federal government. AIP is not just software; it's the decision-intelligence layer that every defense agency and NATO ally will need. On software leadership, PLTR is a Top Pick in our 4th industrial revolution universe." Named directly in his tech bull universe with conviction around the federal AI spending wave and AIP monetization.</div>
+        <div class="jcard-hits">Named in SNOW/PLTR/CRM software leadership report · federal AI spending tailwind · AIP = enterprise AI OS</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier2" id="tier2">
+    <div class="tier-head">
+      <h2>Tier 2 — AI Core: Mag-7 &amp; Infrastructure</h2>
+      <span class="tier-sub">The hyperscaler and GPU layer — Dan Ives is bullish but these are secondary to his conviction picks</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="NVDA_2026-06-24.html" class="jcard-tk">NVDA</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="overweight">Strong Overweight</span>
+          <span class="jcard-type">GPU compute · AI infrastructure · Jensen's revolution</span>
+        </div>
+        <div class="jcard-name">NVIDIA — the infrastructure backbone of Dan Ives's 4th industrial revolution thesis</div>
+        <div class="jcard-quote">"Jensen and NVDA are the backbone of the entire AI revolution. Without NVDA, there is no golden age of AI. This is the company that every hyperscaler, every startup, every model lab needs to build on." Dan Ives consistently includes NVDA as a Strong Overweight in the AI infrastructure layer — it's not his #1 pick (he prefers monetization stories) but it's the keystone of the entire thesis.</div>
+        <div class="jcard-hits">Infrastructure backbone · "Without NVDA there is no Golden Age" · Strong Overweight · Mag-7 framework</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">META</span>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="overweight">Strong Overweight</span>
+          <span class="jcard-type">LLaMA open-source · Ad monetization · AI pivot</span>
+        </div>
+        <div class="jcard-name">Meta Platforms — AI-driven ad monetization + open-source LLaMA strategy</div>
+        <div class="jcard-quote">"Meta's stock is not reflecting the revenue opportunities… when you think about what Zuckerberg is doing with AI, with LLaMA, with ad monetization, with the social graph — Meta is one of the clearest AI monetization stories in the Mag-7." Dan Ives is bullish on META as an AI monetization play: the social graph + AI recommendations = higher ad CPMs at scale.</div>
+        <div class="jcard-hits">LLaMA + ad monetization = AI revenue driver · corpus: "stock not reflecting revenue opportunities" · Strong Overweight</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="AMZN_2026-06-20.html" class="jcard-tk">AMZN</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="overweight">Strong Overweight</span>
+          <span class="jcard-type">AWS AI services · Anthropic partnership · Bedrock</span>
+        </div>
+        <div class="jcard-name">Amazon / AWS — Anthropic partnership, Bedrock AI platform, cloud AI leader</div>
+        <div class="jcard-quote">"AWS and the Anthropic partnership is a game changer. Bedrock is becoming the enterprise AI platform that developers actually use. Amazon is in the right place at the right time with the right infrastructure for the 4th industrial revolution." Dan Ives treats AMZN as a Strong Overweight with the Anthropic/Bedrock thesis as the key differentiator vs. Azure and Google Cloud.</div>
+        <div class="jcard-hits">Anthropic/Bedrock thesis · AWS AI services monetization · Strong Overweight in 4IR framework</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="GOOGL_2026-06-20.html" class="jcard-tk">GOOGL</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="overweight">Overweight</span>
+          <span class="jcard-type">Gemini · Search AI · Google Cloud</span>
+        </div>
+        <div class="jcard-name">Alphabet / Google — Gemini AI, Search monetization, Google Cloud AI services</div>
+        <div class="jcard-quote">"Google is at a crossroads — they have DeepMind, they have the search dominance, they have Gemini. But the market keeps asking: will AI destroy search or supercharge it? Dan Ives's view: Gemini integration makes Search stickier, not weaker. Overweight." Dan Ives is bullish on GOOGL but acknowledges the search disruption risk — his view is that the Search moat survives AI integration.</div>
+        <div class="jcard-hits">Gemini = search strengthener, not cannibalizer · Google Cloud AI monetization · Overweight but second-tier conviction</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier3" id="tier3">
+    <div class="tier-head">
+      <h2>Tier 3 — Cybersecurity: The AI Security Wave</h2>
+      <span class="tier-sub">Dan Ives sees cybersecurity as a direct beneficiary of AI — more AI = more attack surface = more security spend</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="CRWD_2026-06-24.html" class="jcard-tk">CRWD</a>
+          <span class="tier-badge tier3">Tier 3</span>
+          <span class="top-pick">Top Pick</span>
+          <span class="jcard-type">AI-native security · Falcon platform · Market share winner</span>
+        </div>
+        <div class="jcard-name">CrowdStrike — AI-native cybersecurity platform; Dan Ives's Top Pick in the cyber wave</div>
+        <div class="jcard-quote">"CrowdStrike is the gold standard of cybersecurity — the Falcon platform is an AI-native security system that is taking massive market share. Every enterprise that deploys AI is also deploying more attack surface. CRWD is the picks-and-shovels play on the AI security wave." Dan Ives repeatedly names CRWD as his top cyber pick — the Falcon platform's AI-native architecture makes it the natural winner as enterprises build out AI infrastructure.</div>
+        <div class="jcard-hits">Top Pick cyber · Falcon platform = AI-native security standard · market share expansion thesis</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="PANW_2026-06-24.html" class="jcard-tk">PANW</a>
+          <span class="tier-badge tier3">Tier 3</span>
+          <span class="overweight">Strong Overweight</span>
+          <span class="jcard-type">Platformization · AI security integration · Zero-trust</span>
+        </div>
+        <div class="jcard-name">Palo Alto Networks — platformization strategy consolidating enterprise security into one AI-powered layer</div>
+        <div class="jcard-quote">"Palo Alto's platformization strategy is genius — they're consolidating 30 different security point solutions into one platform. That's a $100B TAM opportunity that only accelerates as AI multiplies the attack surface." Dan Ives is bullish on PANW's "platformization" thesis: security consolidation + AI expansion = durable pricing power.</div>
+        <div class="jcard-hits">Platformization thesis · AI security expansion · 30-point-solution consolidation · Strong Overweight</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">ZS</span>
+          <span class="tier-badge tier3">Tier 3</span>
+          <span class="overweight">Overweight</span>
+          <span class="jcard-type">Zero Trust Network Access · Cloud security · AI workload protection</span>
+        </div>
+        <div class="jcard-name">Zscaler — zero trust network access; cloud-native security for AI workload protection</div>
+        <div class="jcard-quote">"Zscaler is a core piece of the AI security infrastructure — as enterprises move workloads to the cloud and AI agents start acting autonomously, zero-trust is not optional. ZS is a beneficiary of every dollar of AI deployment that needs security." Dan Ives treats ZS as a structural beneficiary of cloud AI deployment — zero-trust becomes mandatory as AI agents proliferate.</div>
+        <div class="jcard-hits">Zero-trust mandatory with AI agents · cloud security expansion · Overweight in cyber sector</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier4" id="tier4">
+    <div class="tier-head">
+      <h2>Tier 4 — Enterprise Software: AI Monetization Wave</h2>
+      <span class="tier-sub">CRM, NOW, SNOW, ORCL — the software layer capturing AI productivity spend</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="NOW_2026-06-20.html" class="jcard-tk">NOW</a>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="overweight">Overweight</span>
+          <span class="jcard-type">Agentic AI workflow · Enterprise automation · NVDA partner</span>
+        </div>
+        <div class="jcard-name">ServiceNow — enterprise AI workflow platform; the "operating system of enterprise AI agents"</div>
+        <div class="jcard-quote">"ServiceNow is becoming the operating system of enterprise AI agents. Their workflow AI is not a feature — it's the platform that orchestrates AI agents across the enterprise. In a world of agentic AI, NOW is a core holding." Dan Ives sees ServiceNow as a direct monetization play on the agentic AI wave: every enterprise that automates workflows runs on NOW.</div>
+        <div class="jcard-hits">Agentic workflow platform · enterprise AI automation · NVDA GTC 2026 partner mention · Overweight</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">CRM</span>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="overweight">Overweight</span>
+          <span class="jcard-type">Agentforce · AI CRM · Marc Benioff AI pivot</span>
+        </div>
+        <div class="jcard-name">Salesforce — Agentforce agentic AI CRM; Dan Ives bullish on the Marc Benioff AI pivot</div>
+        <div class="jcard-quote">"Salesforce and Agentforce is the sleeper AI monetization story of 2026. Marc Benioff was early to the cloud and he's not late to AI. Agentforce is real — autonomous AI agents embedded in every CRM workflow. On software leadership, CRM is in our top picks for AI monetization." Cited directly in his SNOW/PLTR/CRM software leadership report as an AI monetization standout.</div>
+        <div class="jcard-hits">Named in SNOW/PLTR/CRM software leadership report · Agentforce = autonomous AI CRM agents · Overweight</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="SNOW_2026-06-20.html" class="jcard-tk">SNOW</a>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="overweight">Overweight</span>
+          <span class="jcard-type">Data cloud · AI data platform · Enterprise data gravity</span>
+        </div>
+        <div class="jcard-name">Snowflake — data cloud; Dan Ives bullish on the AI data gravity thesis</div>
+        <div class="jcard-quote">"Snowflake has the most important asset in AI — the data. Every AI model needs clean, governed enterprise data and Snowflake sits on top of that. The new CEO is making the right moves. SNOW is a Mag-7 ROI play in our AI monetization framework." Named alongside PLTR and CRM in his software leadership report focused on AI ROI.</div>
+        <div class="jcard-hits">Named in Mag-7 ROI report · data gravity thesis · enterprise data platform = AI foundation · Overweight</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">ORCL</span>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="constructive">Constructive</span>
+          <span class="jcard-type">OCI cloud growth · Database AI · Larry Ellison AI bet</span>
+        </div>
+        <div class="jcard-name">Oracle — OCI cloud momentum; Dan Ives constructive on Larry Ellison's AI infrastructure bet</div>
+        <div class="jcard-quote">"Oracle has surprised everyone with OCI growth. Larry Ellison is making Oracle into the third cloud. Their database + AI integration story is underappreciated. We're constructive on ORCL as an AI monetization story that most people still underestimate." Dan Ives is constructive on ORCL — not his top pick, but part of the AI monetization universe he covers.</div>
+        <div class="jcard-hits">OCI growth surprise · database AI integration · "third cloud" thesis · Constructive</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier5" id="tier5">
+    <div class="tier-head">
+      <h2>Tier 5 — EV &amp; Autonomous: The Physical AI Wave</h2>
+      <span class="tier-sub">Tesla as the one EV/autonomous play in Dan Ives's universe — software monetization, not car company</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">TSLA</span>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="top-pick">Top Pick</span>
+          <span class="jcard-type">FSD autonomous · Robotaxi · Energy software</span>
+        </div>
+        <div class="jcard-name">Tesla — Dan Ives's bull case is FSD + robotaxi, not the car business</div>
+        <div class="jcard-quote">"We're in the 3rd inning of the AI revolution and Tesla is the one play in our coverage that bridges EV and autonomous AI. FSD is not a feature — it's the software platform. Robotaxi is the monetization event. Wedbush PT $550 on Tesla." Dan Ives is one of the loudest Tesla bulls on Wall Street — but his bull case is software monetization (FSD, Robotaxi, Energy) not hardware margins. The AI angle: Tesla's real value is the autonomy + energy software stack.</div>
+        <div class="jcard-hits">$550 PT Wedbush · "FSD is the software platform" · Robotaxi monetization event · Top Pick EV/autonomous universe</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">MU</span>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="constructive">Watch: Gut Check</span>
+          <span class="jcard-type">HBM memory · Earnings catalyst · AI memory demand</span>
+        </div>
+        <div class="jcard-name">Micron — Wedbush: "Micron earnings to be a gut check moment for markets"</div>
+        <div class="jcard-quote">"Micron earnings to be a gut check moment for markets — we will see if the AI memory demand story is still intact or if there's any cracks in the HBM thesis. Dan Ives on Micron: the AI memory spend is real and Micron is in the right place, but execution matters." Named directly in Dan Ives corpus as a market-moving catalyst event — constructive but with execution risk watch.</div>
+        <div class="jcard-hits">Direct corpus mention: "gut check moment" · HBM thesis check · Constructive with execution watch</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier6" id="tier6">
+    <div class="tier-head">
+      <h2>Tier 6 — Outside Coverage Universe</h2>
+      <span class="tier-sub">Names outside Dan Ives's US large-cap tech / cyber / EV focus — insufficient evidence for a verdict</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">—</span>
+          <span class="tier-badge tier6">Tier 6</span>
+          <span class="jcard-type">Infra · Energy · Semi · International</span>
+        </div>
+        <div class="jcard-name">Infrastructure, energy, semiconductors (below NVDA), international tech — not in Dan Ives's core coverage</div>
+        <div class="jcard-quote">Dan Ives covers US large-cap tech (AAPL/MSFT/GOOGL/META/AMZN), enterprise software (CRM/NOW/PLTR), cybersecurity (CRWD/PANW/ZS), and EV/autonomous (TSLA). He does not typically cover semiconductor supply chains (TSMC, ASML), power infrastructure (CEG, VRT), AI networking (CRDO, MRVL), or non-US tech. A name outside this universe gets "Insufficient evidence" — do not infer a verdict from his general AI-bull framing.</div>
+        <div class="jcard-hits">460 corpus chunks · coverage universe: US large-cap tech + cyber + enterprise software + EV</div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="disclaimer" style="font-size:12px;color:var(--muted);margin-top:32px;padding-top:16px;border-top:1px solid var(--border)">
+    Source: Dan Ives Brain corpus — 460 chunks from 23 media appearances (CNBC, Bloomberg, Fox Business, Yahoo Finance) + 248 news materials.
+    Last rebuilt: 2026-06-27. Tier classification is editorial based on Dan Ives's explicit Buy/Outperform calls and stated conviction narrative.
+    Wedbush Securities sell-side ratings are for informational context only. Not investment advice.
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var sections = document.querySelectorAll('.tier-section');
+  var links = document.querySelectorAll('.sticky-nav-inner a.sn-link');
+  function onScroll(){
+    var scrollY = window.scrollY + 120;
+    var current = '';
+    sections.forEach(function(s){ if(s.offsetTop <= scrollY) current = s.id; });
+    links.forEach(function(a){
+      var href = a.getAttribute('href');
+      a.style.borderColor = (href === '#'+current) ? 'var(--accent)' : '';
+      a.style.color = (href === '#'+current) ? 'var(--txt)' : '';
+    });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+})();
+</script>
+</body>
+</html>

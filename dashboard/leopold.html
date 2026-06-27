@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Leopold Brain — Situational Awareness Portfolio Map</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .tier1{--tc:#2ea043;--tb:#2ea04322;--tborder:#2ea04366}
+  .tier2{--tc:#58a6ff;--tb:#1f6feb22;--tborder:#1f6feb66}
+  .tier3{--tc:#d29922;--tb:#d2992218;--tborder:#d2992266}
+  .tier4{--tc:#8957e5;--tb:#8957e522;--tborder:#8957e566}
+  .tier5{--tc:#db6d28;--tb:#db6d2818;--tborder:#db6d2866}
+  .tier6{--tc:#f85149;--tb:#f8514918;--tborder:#f8514966}
+
+  .tier-badge{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.04em;
+    background:var(--tb);border:1px solid var(--tborder);color:var(--tc);white-space:nowrap
+  }
+  .tier-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 32px}
+  .tier-nav a{
+    display:flex;align-items:center;gap:8px;
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:10px 16px;text-decoration:none;color:var(--txt);font-size:13px;font-weight:600;
+    transition:border-color .15s,background .15s;min-width:160px
+  }
+  .tier-nav a:hover{border-color:var(--accent);background:var(--panel2)}
+  .tier-nav a .tier-num{font-size:20px;font-weight:800;line-height:1}
+  .tier-nav a .tier-label{font-size:11px;color:var(--muted);font-weight:400;margin-top:2px}
+  .tier-section{margin:0 0 40px;scroll-margin-top:80px}
+  .tier-head{
+    display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+    border-left:3px solid var(--tc);padding-left:12px;margin:0 0 14px
+  }
+  .tier-head h2{margin:0;font-size:17px;color:var(--txt);text-transform:none;letter-spacing:0}
+  .tier-head .tier-sub{font-size:12px;color:var(--muted)}
+  .jcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+  .jcard{
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:14px 16px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s
+  }
+  .jcard:hover{border-color:var(--accent)}
+  .jcard-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .jcard-tk{font-size:18px;font-weight:800;min-width:60px;color:var(--accent);text-decoration:none}
+  .jcard-tk:hover{text-decoration:underline}
+  .jcard-tk.nolink{color:var(--txt);cursor:default;pointer-events:none}
+  .jcard-type{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+  .jcard-name{font-size:12px;color:var(--muted)}
+  .jcard-quote{
+    font-size:12px;color:var(--txt);line-height:1.55;
+    border-left:2px solid var(--tborder);padding-left:10px;font-style:italic;opacity:.85
+  }
+  .jcard-hits{font-size:11px;color:var(--muted)}
+  .j-hero{
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:22px 24px;margin:0 0 28px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap
+  }
+  .j-hero-icon{font-size:48px;line-height:1}
+  .j-hero-body h1{margin:0 0 6px;font-size:22px}
+  .j-hero-body p{margin:0;font-size:13px;color:var(--muted);max-width:680px;line-height:1.6}
+  .j-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 28px}
+  .j-stat{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .j-stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .j-stat .v{font-size:22px;font-weight:700;margin-top:4px}
+  .j-stat .v small{font-size:12px;font-weight:500;color:var(--muted)}
+  .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;
+    text-decoration:none;margin-bottom:20px}
+  .back-link:hover{color:var(--txt)}
+  .sticky-nav{
+    position:sticky;top:0;z-index:10;background:var(--bg);
+    border-bottom:1px solid var(--border);padding:6px 0 8px;margin:0 0 24px
+  }
+  .sticky-nav-inner{max-width:1180px;margin:0 auto;padding:0 20px;
+    display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .sticky-nav-inner a.sn-link{
+    font-size:12px;font-weight:600;padding:3px 12px;border-radius:14px;
+    border:1px solid var(--border);color:var(--muted);text-decoration:none;
+    transition:border-color .15s,color .15s
+  }
+  .sticky-nav-inner a.sn-link:hover{border-color:var(--accent);color:var(--txt)}
+  .sticky-nav-inner .sn-label{font-size:12px;color:var(--muted);margin-right:4px}
+  .short-badge{background:#f8514918;border:1px solid #f8514966;color:#f85149;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .pos-size{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;
+    background:#2ea04318;border:1px solid #2ea04366;color:#2ea043}
+</style>
+</head>
+<body>
+
+<div class="sticky-nav">
+  <div class="sticky-nav-inner">
+    <span class="sn-label">Jump:</span>
+    <a class="sn-link" href="#tier1">T1 · Power Bottleneck</a>
+    <a class="sn-link" href="#tier2">T2 · Compute Operators</a>
+    <a class="sn-link" href="#tier3">T3 · Memory/Storage</a>
+    <a class="sn-link" href="#tier4">T4 · Crypto→AI Miners</a>
+    <a class="sn-link" href="#tier5">T5 · Complex Hedges</a>
+    <a class="sn-link" href="#tier6">T6 · Short Book</a>
+    <a class="sn-link" href="index.html" style="margin-left:auto;border-color:#30363d">← Main Dashboard</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <a href="index.html" class="back-link">← Back to Main Dashboard</a>
+
+  <div class="j-hero">
+    <div class="j-hero-icon">📖</div>
+    <div class="j-hero-body">
+      <h1>Leopold Brain — Situational Awareness Portfolio</h1>
+      <p>Leopold Aschenbrenner (ex-OpenAI alignment, Situational Awareness LP) bets the AGI build-out thesis bottom-up through the infrastructure layer. His 13F (Q1 2026, $7.4B portfolio) reveals a <strong>long-short structure</strong>: long power + dedicated compute operators; <strong>short NVDA, AVGO, AMD, ORCL</strong> (priced-in semis) via $7B+ in puts. The insight: "The binding constraint on the largest training clusters won't be chips — it will be power." He owns the bottleneck, not the hype.</p>
+    </div>
+  </div>
+
+  <div class="j-stats">
+    <div class="j-stat"><div class="k">Corpus</div><div class="v">891<small> chunks</small></div></div>
+    <div class="j-stat"><div class="k">13F period</div><div class="v" style="font-size:14px">Q1 2026<small> filed 2026-05-18</small></div></div>
+    <div class="j-stat"><div class="k">Longs (13F)</div><div class="v">$3.9B<small> power · cloud · storage</small></div></div>
+    <div class="j-stat"><div class="k">Short book</div><div class="v">$7B+<small> puts on NVDA/AVGO/AMD</small></div></div>
+    <div class="j-stat"><div class="k">Core thesis</div><div class="v" style="font-size:12px">Power is the binding constraint on the AGI race</div></div>
+  </div>
+
+  <section class="tier-section tier1" id="tier1">
+    <div class="tier-head">
+      <h2>Tier 1 — Power Is the Binding Constraint</h2>
+      <span class="tier-sub">Leopold's biggest longs — energy infrastructure for the trillion-dollar compute cluster</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">BE</span>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">Clean power generation · Fuel cells · AI data center power</span>
+          <span class="pos-size">#1 bet · $934M</span>
+        </div>
+        <div class="jcard-name">Bloom Energy — solid oxide fuel cells, on-site clean power for AI data centers</div>
+        <div class="jcard-quote">"The binding constraint on the largest training clusters won't be chips, but industrial mobilization — perhaps most of all the 100GW of power for the trillion-dollar cluster." Bloom provides off-grid, uninterruptible clean power — exactly the kind of energy Leopold identifies as the AI race's real bottleneck.</div>
+        <div class="jcard-hits">$878.7M long + $55.3M calls = $934M total · largest long position in the 13F</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="IREN_2026-06-24.html" class="jcard-tk">IREN</a>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">Renewable power + GPU cloud · 6 GW pipeline</span>
+          <span class="pos-size">$401M</span>
+        </div>
+        <div class="jcard-name">Iris Energy — owned renewable power capacity, GPU AI data center colocation</div>
+        <div class="jcard-quote">"In the last decade, China roughly built as much new electricity capacity as the entire US capacity. If you're going to race for AGI, you need the power first." Leopold holds IREN as a direct expression of this thesis — own the power, rent the compute.</div>
+        <div class="jcard-hits">$401.0M pure long · #2 pure-equity position · Jefferies labels IREN "NVDA DSX ecosystem partner"</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">SLNX</span>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">On-site energy infrastructure for AI</span>
+          <span class="pos-size">$62.5M</span>
+        </div>
+        <div class="jcard-name">Solaris Energy Infrastructure — modular power systems for remote/industrial sites</div>
+        <div class="jcard-quote">Power scarcity thesis play. AI clusters need dedicated, scalable power delivered fast. Solaris deploys modular generation units to sites that can't wait years for grid connection — the same bottleneck Leopold identifies in his essay.</div>
+        <div class="jcard-hits">$62.5M long · part of the power-infrastructure basket</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">T1E</span>
+          <span class="tier-badge tier1">Tier 1</span>
+          <span class="jcard-type">Clean energy infrastructure · AI power</span>
+          <span class="pos-size">$43.9M</span>
+        </div>
+        <div class="jcard-name">T1 Energy — renewable energy infrastructure projects</div>
+        <div class="jcard-quote">Leopold's energy-infrastructure basket extends to T1 Energy, underscoring that the power-bottleneck thesis is expressed broadly: own any company delivering new, fast power capacity to meet the 100GW+ demand he describes.</div>
+        <div class="jcard-hits">$43.9M long · power infrastructure basket</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier2" id="tier2">
+    <div class="tier-head">
+      <h2>Tier 2 — Dedicated Compute Operators</h2>
+      <span class="tier-sub">The AI-compute "landlords" — own the infrastructure, not the chip design</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="CRWV_2026-06-24.html" class="jcard-tk">CRWV</a>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="jcard-type">GPU cloud · NVDA investee · Vera Rubin operator</span>
+          <span class="pos-size">$697M</span>
+        </div>
+        <div class="jcard-name">CoreWeave — NVDA-GPU hyperscale cloud, dedicated AI compute operator</div>
+        <div class="jcard-quote">"We are way behind on the inputs of AGI: chips, energy, data centers. We need government to treat this like Manhattan Project urgency." CoreWeave is the operator expression of that urgency — purpose-built GPU data centers at scale. Leopold is long CoreWeave as the pick-and-shovel operator (not NVDA the chip maker).</div>
+        <div class="jcard-hits">$556.1M long + $140.6M calls = $696.7M total · third-largest position</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">CORZ</span>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="jcard-type">AI data center · Ex-Bitcoin miner pivot</span>
+          <span class="pos-size">$389M</span>
+        </div>
+        <div class="jcard-name">Core Scientific — pivoted from Bitcoin mining to AI data center colocation</div>
+        <div class="jcard-quote">Core Scientific signed a long-term deal with CoreWeave and converted its mining facilities to AI data centers. Leopold holds this as a leveraged power + compute play: owns cheap power assets (the bottleneck) now redirected to the highest-value use (AI training).</div>
+        <div class="jcard-hits">$389.1M long · #3 pure-equity position by size</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">APLD</span>
+          <span class="tier-badge tier2">Tier 2</span>
+          <span class="jcard-type">AI data center colocation · Power-heavy sites</span>
+          <span class="pos-size">$320M</span>
+        </div>
+        <div class="jcard-name">Applied Digital — AI data center colocation and hosting</div>
+        <div class="jcard-quote">Another dedicated AI compute operator Leopold holds alongside CORZ and CRWV. Applied Digital leases power-rich data center capacity to AI hyperscalers — benefiting directly from the infrastructure shortage Leopold identifies as the binding constraint.</div>
+        <div class="jcard-hits">$320.0M long · part of the compute-operator basket</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier3" id="tier3">
+    <div class="tier-head">
+      <h2>Tier 3 — Memory &amp; Storage Layer</h2>
+      <span class="tier-sub">Flash storage supply as an AI training bottleneck play</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">SNDK</span>
+          <span class="tier-badge tier3">Tier 3</span>
+          <span class="jcard-type">NAND flash · Storage layer · WD spinoff</span>
+          <span class="pos-size">$1.1B</span>
+        </div>
+        <div class="jcard-name">SanDisk — NAND flash memory and storage (spun off from Western Digital 2024)</div>
+        <div class="jcard-quote">"The 100GW cluster needs memory, networking, and storage beyond the GPU itself." SanDisk at $1.1B is Leopold's second-largest bet by total dollar size — a bet that flash storage capacity (not just GPU compute) is undersupplied for the trillion-dollar cluster. Also reflects his thesis that the full memory stack — not only HBM — matters.</div>
+        <div class="jcard-hits">$724.4M long + $388.8M calls = $1.113B total · second-largest position overall</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier4" id="tier4">
+    <div class="tier-head">
+      <h2>Tier 4 — Crypto Miners → AI Infrastructure</h2>
+      <span class="tier-sub">Power-asset plays pivoting toward AI workloads — own cheap electricity, pivot to the highest bidder</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">RIOT</span>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="jcard-type">Bitcoin miner · Power-rich assets · AI pivot optionality</span>
+          <span class="pos-size">$142M</span>
+        </div>
+        <div class="jcard-name">Riot Platforms — Bitcoin miner with large owned power capacity</div>
+        <div class="jcard-quote">Leopold holds a basket of crypto miners primarily as leveraged power-infrastructure plays. Bitcoin miners locked in cheap power purchase agreements now face a strategic choice: sell power back to the grid at AI data center premiums. The "power bottleneck" thesis makes cheap, contracted power valuable regardless of crypto prices.</div>
+        <div class="jcard-hits">$142.2M long</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">CLSK</span>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="jcard-type">Bitcoin miner · Distributed power sites · AI optionality</span>
+          <span class="pos-size">$105M</span>
+        </div>
+        <div class="jcard-name">CleanSpark — Bitcoin mining with clean-energy sites, AI infrastructure optionality</div>
+        <div class="jcard-hits">$104.5M long · power-asset basket alongside RIOT, BITF, BTDR</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">BITF</span>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="jcard-type">Canadian Bitcoin miner · Clean hydro power</span>
+          <span class="pos-size">$38.8M</span>
+        </div>
+        <div class="jcard-name">Bitfarms — Canadian Bitcoin miner with hydroelectric power contracts</div>
+        <div class="jcard-hits">$38.8M long · clean hydro power-contract optionality</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">BTDR</span>
+          <span class="tier-badge tier4">Tier 4</span>
+          <span class="jcard-type">Mining + cloud computing hybrid · Asia Pacific</span>
+          <span class="pos-size">$29.8M</span>
+        </div>
+        <div class="jcard-name">Bitdeer Technologies — crypto mining + AI cloud compute, Singapore-based</div>
+        <div class="jcard-hits">$29.8M long · hybrid mining/cloud model</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier5" id="tier5">
+    <div class="tier-head">
+      <h2>Tier 5 — Complex Hedges (Straddles)</h2>
+      <span class="tier-sub">Both large puts AND calls — earnings/event hedges, not directional bets</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="MU_2026-06-24.html" class="jcard-tk">MU</a>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="jcard-type">HBM memory · Earnings straddle · Options play</span>
+        </div>
+        <div class="jcard-name">Micron Technology — HBM4 supplier, complex options position around earnings</div>
+        <div class="jcard-quote">"HBM4 memory from Micron, SK Hynix and Samsung — the Vera Rubin compute board." MU sits at a genuine inflection: massive HBM demand surge vs. DRAM oversupply risk. Leopold expresses this uncertainty via a straddle — not a directional call.</div>
+        <div class="jcard-hits">$5.9M long + $583.7M puts + $422.3M calls = straddle · ~$1B options notional</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">TSM</span>
+          <span class="tier-badge tier5">Tier 5</span>
+          <span class="jcard-type">TSMC ADR · Geopolitical risk · China-Taiwan straddle</span>
+        </div>
+        <div class="jcard-name">Taiwan Semiconductor — sole manufacturer of advanced AI chips, massive geopolitical risk</div>
+        <div class="jcard-quote">"ASML is not an American company… These things get stuck in environmental review. China can simply outbuild us on the largest training clusters." TSMC is Leopold's most-written-about supply risk — but he expresses it as a straddle: huge upside if AI demand continues, existential tail risk if Taiwan is cut off.</div>
+        <div class="jcard-hits">$7.6M long + $535.1M puts + $354.8M calls = straddle · ~$900M options notional</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tier-section tier6" id="tier6">
+    <div class="tier-head">
+      <h2>Tier 6 — Short Book: The Priced-In AI Trade</h2>
+      <span class="tier-sub">Leopold is SHORT the conventional AI stocks via massive puts — these are overvalued relative to the real bottleneck</span>
+    </div>
+    <div class="jcards">
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="NVDA_2026-06-24.html" class="jcard-tk">NVDA</a>
+          <span class="short-badge">SHORT $1.57B puts</span>
+          <span class="tier-badge tier6">Short</span>
+        </div>
+        <div class="jcard-name">NVIDIA — GPU accelerators; Leopold holds $0.5M long vs. $1,568M in puts</div>
+        <div class="jcard-quote">"Most of the gains in AI chips have come from improved chip design… Moore's Law is glacial. I wouldn't expect FLOP/$ to improve faster than 35%/year." His largest short position: $1.568B in NVDA puts. His thesis: the market prices NVDA as if it has infinite runway, but the real bottleneck has already shifted to power and he owns that directly.</div>
+        <div class="jcard-hits">$1,568.3M puts — largest short in the book · vs. only $0.5M long</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">SMH</span>
+          <span class="short-badge">SHORT $2.04B puts</span>
+          <span class="tier-badge tier6">Short</span>
+        </div>
+        <div class="jcard-name">VanEck Semiconductor ETF — broad semiconductor index; Leopold's biggest single put position</div>
+        <div class="jcard-quote">Leopold's $2B+ SMH put is his broadest short expression: he's not just skeptical of NVDA's valuation — he's skeptical of the entire semiconductor sector relative to what he believes is the true AI bottleneck (power infrastructure). A single trade that expresses bearishness across the whole chip complex.</div>
+        <div class="jcard-hits">$2,042.7M puts — largest single position in the 13F (both long and short book)</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">ORCL</span>
+          <span class="short-badge">SHORT $1.07B puts</span>
+          <span class="tier-badge tier6">Short</span>
+        </div>
+        <div class="jcard-name">Oracle — cloud database and infrastructure; no long position</div>
+        <div class="jcard-quote">"In the US, these things get stuck in environmental review, permitting, and regulation for a decade first." Oracle's AI-cloud story requires cheap power and fast data center deployment — two things the US grid is failing to deliver. Leopold is short Oracle as a cloud infrastructure story that can't scale at AGI speed.</div>
+        <div class="jcard-hits">$1,072.9M puts · zero long position</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <a href="AVGO_2026-06-24.html" class="jcard-tk">AVGO</a>
+          <span class="short-badge">SHORT $1.01B puts</span>
+          <span class="tier-badge tier6">Short</span>
+        </div>
+        <div class="jcard-name">Broadcom — custom AI ASICs; Leopold is net short via $1B in puts with no long</div>
+        <div class="jcard-quote">Broadcom trades as an alternative to NVDA for custom AI silicon (Google TPUs, etc.). Leopold's $1B put position suggests he views AVGO as equally priced-in as NVDA — the market has already paid for the AI custom-silicon story, leaving little upside relative to owning actual power infrastructure.</div>
+        <div class="jcard-hits">$1,006.2M puts · zero long position</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">AMD</span>
+          <span class="short-badge">SHORT $969M puts</span>
+          <span class="tier-badge tier6">Short</span>
+        </div>
+        <div class="jcard-name">Advanced Micro Devices — GPU competitor to NVDA; small long overwhelmed by massive put book</div>
+        <div class="jcard-quote">"For GPUs, you can make very good AI chips on top of a 7nm process." AMD competes on price for inference workloads, but Leopold's thesis is that differentiation in chip design matters less than the power you plug them into. He holds $20M long (possibly a hedge) against $969M in puts.</div>
+        <div class="jcard-hits">$969.2M puts vs. $20.2M long · net short</div>
+      </div>
+
+      <div class="jcard">
+        <div class="jcard-top">
+          <span class="jcard-tk nolink">ASML</span>
+          <span class="short-badge">SHORT $494M puts</span>
+          <span class="tier-badge tier6">Short</span>
+        </div>
+        <div class="jcard-name">ASML — EUV lithography; flagged in essay as a geopolitical supply risk</div>
+        <div class="jcard-quote">"ASML is not an American company. And it turns out just about every one of our energy sectors rely deeply on technology." Leopold WRITES about ASML as a risk but TRADES it as a short — the same geopolitical risk he identifies makes him bearish on ASML's ability to expand capacity at the pace needed, even as demand explodes.</div>
+        <div class="jcard-hits">$494.1M puts · mentioned 15x in corpus · paradox: writes about it, bets against it</div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="disclaimer" style="font-size:12px;color:var(--muted);margin-top:32px;padding-top:16px;border-top:1px solid var(--border)">
+    Source: Leopold Brain corpus (891 chunks — Situational Awareness essay + interviews) + Situational Awareness LP 13F Q1 2026 filed 2026-05-18.
+    Position sizes are 13F fair values; puts represent bearish exposure. Tier classification is editorial based on position size and thesis alignment.
+    Not investment advice.
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var sections = document.querySelectorAll('.tier-section');
+  var links = document.querySelectorAll('.sticky-nav-inner a.sn-link');
+  function onScroll(){
+    var scrollY = window.scrollY + 120;
+    var current = '';
+    sections.forEach(function(s){ if(s.offsetTop <= scrollY) current = s.id; });
+    links.forEach(function(a){
+      var href = a.getAttribute('href');
+      a.style.borderColor = (href === '#'+current) ? 'var(--accent)' : '';
+      a.style.color = (href === '#'+current) ? 'var(--txt)' : '';
+    });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+})();
+</script>
+</body>
+</html>
