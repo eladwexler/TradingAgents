@@ -402,6 +402,27 @@
   }
   window.addEventListener('scroll', onScroll, {passive:true});
 })();
+
+// Signal badges — green = Buy/Overweight call, gray = outside coverage universe
+(function(){
+  var T={tier1:'pos',tier2:'pos',tier3:'pos',tier4:'pos',tier5:'pos',tier6:'insuf'};
+  var C={pos:{l:'Positive',bg:'#2ea04322',bd:'#2ea04366',cl:'#2ea043'},
+         neg:{l:'Short · Avoid',bg:'#f8514922',bd:'#f8514966',cl:'#f85149'},
+         mixed:{l:'Mixed',bg:'#d2992222',bd:'#d2992266',cl:'#d29922'},
+         insuf:{l:'Insufficient',bg:'#8b98a520',bd:'#8b98a560',cl:'#8b98a5'}};
+  document.querySelectorAll('.tier-section').forEach(function(sec){
+    var sig=T[sec.id]; if(!sig) return;
+    var c=C[sig];
+    sec.querySelectorAll('.jcard-top').forEach(function(top){
+      var b=document.createElement('span');
+      b.textContent=c.l;
+      b.style.cssText='background:'+c.bg+';border:1px solid '+c.bd+';color:'+c.cl
+        +';font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0';
+      var f=top.firstElementChild;
+      if(f&&f.nextSibling)top.insertBefore(b,f.nextSibling);else top.appendChild(b);
+    });
+  });
+})();
 </script>
 </body>
 </html>
