@@ -1,6 +1,6 @@
 {
   "permissions": {
-    "allow": ["Bash(*)", "Read(*)", "Write(*)", "Edit(*)", "Agent(*)", "WebFetch(*)", "WebSearch(*)", "mcp__*"],
+    "allow": ["Bash(*)", "Read(*)", "Write(*)", "Edit(*)", "Agent(*)", "WebFetch(*)", "WebSearch(*)" ],
     "defaultMode": "bypassPermissions"
   }
 }

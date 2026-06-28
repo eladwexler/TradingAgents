@@ -120,7 +120,11 @@
     <button class="tabbtn" onclick="showTab('tab-news',this)">🗞️ News</button>
     <button class="tabbtn" onclick="showTab('tab-reversals',this)">{{REVERSALS_TAB}}</button>
     <button class="tabbtn" onclick="showTab('tab-changes',this)">{{CHANGES_TAB}}</button>
-    <a class="tabbtn" href="jensen.html" style="text-decoration:none;padding:8px 16px">🧠 Jensen Brain</a>
+    <a class="tabbtn" href="jensen.html" style="text-decoration:none;padding:8px 16px">🧠 Jensen</a>
+    <a class="tabbtn" href="leopold.html" style="text-decoration:none;padding:8px 16px">📖 Leopold</a>
+    <a class="tabbtn" href="jordi.html" style="text-decoration:none;padding:8px 16px">📡 Jordi</a>
+    <a class="tabbtn" href="gavin.html" style="text-decoration:none;padding:8px 16px">⚡ Gavin</a>
+    <a class="tabbtn" href="dan-ives.html" style="text-decoration:none;padding:8px 16px">🔮 Dan Ives</a>
   </nav>
 
   <section class="tabpanel active" id="tab-overview">
@@ -129,6 +133,7 @@
 
   <h2>Secular lenses</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin:0 0 28px">
+
     <a href="jensen.html" style="text-decoration:none">
       <div style="background:#161b22;border:1px solid #2d3643;border-radius:12px;padding:16px 18px;
            display:flex;gap:14px;align-items:flex-start;cursor:pointer;transition:border-color .15s"
@@ -136,7 +141,7 @@
         <div style="font-size:32px;line-height:1">🧠</div>
         <div>
           <div style="font-weight:700;font-size:15px;color:#e6edf3;margin-bottom:4px">Jensen Brain — Endorsement Map</div>
-          <div style="font-size:12px;color:#8b98a5;line-height:1.5">25+ stocks ranked across 6 tiers by how strongly Jensen Huang endorsed them — from NVDA-invested companies (MRVL $2B, COHR $2B, CRWV, NBIS, INTC) to supply-chain dependencies and passing mentions. 5,131 corpus chunks.</div>
+          <div style="font-size:12px;color:#8b98a5;line-height:1.5">25+ stocks ranked across 6 tiers by how strongly Jensen Huang endorsed them — from NVDA-invested companies (MRVL $2B, COHR $2B, CRWV, NBIS, INTC) to supply-chain dependencies and passing mentions. 5,163 corpus chunks.</div>
           <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
             <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#2ea04322;border:1px solid #2ea04366;color:#2ea043">T1 · NVDA-Invested</span>
             <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#1f6feb22;border:1px solid #1f6feb66;color:#58a6ff">T2 · Platform Partners</span>
@@ -145,6 +150,75 @@
         </div>
       </div>
     </a>
+
+    <a href="leopold.html" style="text-decoration:none">
+      <div style="background:#161b22;border:1px solid #2d3643;border-radius:12px;padding:16px 18px;
+           display:flex;gap:14px;align-items:flex-start;cursor:pointer;transition:border-color .15s"
+           onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#2d3643'">
+        <div style="font-size:32px;line-height:1">📖</div>
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#e6edf3;margin-bottom:4px">Leopold Brain — Situational Awareness Portfolio</div>
+          <div style="font-size:12px;color:#8b98a5;line-height:1.5">Long-short structure from Q1 2026 13F ($7.4B portfolio): long power + compute operators (BE $934M, SNDK $1.1B, CRWV $697M, CORZ $389M, IREN $401M); SHORT semis via $7B+ puts on NVDA, SMH, AVGO, AMD, ORCL. "Power is the binding constraint — not chips." 891 corpus chunks.</div>
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#2ea04322;border:1px solid #2ea04366;color:#2ea043">T1 · Power Operators</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#1f6feb22;border:1px solid #1f6feb66;color:#58a6ff">T2 · Compute Landlords</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#f8514918;border:1px solid #f8514966;color:#f85149">T6 · Short: Priced-In Semis</span>
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <a href="jordi.html" style="text-decoration:none">
+      <div style="background:#161b22;border:1px solid #2d3643;border-radius:12px;padding:16px 18px;
+           display:flex;gap:14px;align-items:flex-start;cursor:pointer;transition:border-color .15s"
+           onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#2d3643'">
+        <div style="font-size:32px;line-height:1">📡</div>
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#e6edf3;margin-bottom:4px">Jordi Brain — Capex Receiver Map</div>
+          <div style="font-size:12px;color:#8b98a5;line-height:1.5">"Your capex is my opportunity" — the $1.3T cloud backlog flows to receivers (NVDA, AVGO, MU, CRDO, MRVL, CEG, VRT), not the hyperscaler spenders. Bitcoin as the AI-deflation macro trade. Creative destruction short for legacy SaaS/BPO. 4,671 chunks from 99 @JordiVisserLabs videos.</div>
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#2ea04322;border:1px solid #2ea04366;color:#2ea043">T1 · Semi Receivers</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#1f6feb22;border:1px solid #1f6feb66;color:#58a6ff">T2 · Power Layer</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#db6d2818;border:1px solid #db6d2866;color:#db6d28">T5 · Cautious: Spenders</span>
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <a href="gavin.html" style="text-decoration:none">
+      <div style="background:#161b22;border:1px solid #2d3643;border-radius:12px;padding:16px 18px;
+           display:flex;gap:14px;align-items:flex-start;cursor:pointer;transition:border-color .15s"
+           onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#2d3643'">
+        <div style="font-size:32px;line-height:1">⚡</div>
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#e6edf3;margin-bottom:4px">Gavin Brain — Sustaining vs. Disruptive</div>
+          <div style="font-size:12px;color:#8b98a5;line-height:1.5">Clayton Christensen lens: AI sustains incumbents with data/compute moats (NVDA highest conviction; MSFT "courageous bet"; AMZN most startup-engaged). Disruptive to gross-margin-defending SaaS. "Nothing like this has ever happened in capitalism." 1,021 chunks from 12 long-form appearances.</div>
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#2ea04322;border:1px solid #2ea04366;color:#2ea043">T1 · Conviction Sustaining</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#1f6feb22;border:1px solid #1f6feb66;color:#58a6ff">T2 · Courageous Betters</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#db6d2818;border:1px solid #db6d2866;color:#db6d28">T5 · Margin Fear Risk</span>
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <a href="dan-ives.html" style="text-decoration:none">
+      <div style="background:#161b22;border:1px solid #2d3643;border-radius:12px;padding:16px 18px;
+           display:flex;gap:14px;align-items:flex-start;cursor:pointer;transition:border-color .15s"
+           onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#2d3643'">
+        <div style="font-size:32px;line-height:1">🔮</div>
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#e6edf3;margin-bottom:4px">Dan Ives Brain — 4th Industrial Revolution</div>
+          <div style="font-size:12px;color:#8b98a5;line-height:1.5">"3rd inning of the Golden Age of AI." Top Picks: MSFT (Copilot = AI tax on enterprise productivity), AAPL (1.4B device supercycle), PLTR ("Oracle of AI" for federal gov), CRWD (AI security leader), TSLA (FSD software monetization). 491 chunks from 23 appearances + 279 news items.</div>
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#2ea04322;border:1px solid #2ea04366;color:#2ea043">T1 · Top Picks</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#d2992218;border:1px solid #d2992266;color:#d29922">T3 · Cybersecurity</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#8957e522;border:1px solid #8957e566;color:#8957e5">T4 · Enterprise Software</span>
+          </div>
+        </div>
+      </div>
+    </a>
+
   </div>
 
   <h2>Best decisions</h2>
